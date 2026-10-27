@@ -369,3 +369,20 @@ def test_invalid_reference_grid_is_rejected(edges):
 def test_invalid_reference_parameters_are_rejected(kwargs):
     with pytest.raises(ValueError):
         sine_cell_averages([0.0, 0.5, 1.0], **kwargs)
+
+
+
+def test_subnormal_scaling_at_cfl_one():
+    for speed in (1e-310, -1e-310):
+        result = step_upwind(
+                [1.0, 2.0], 
+                speed=speed, 
+                dx = 1e-310,
+                dt = 1.0,
+            )
+            np.testing.assert_array_equal(
+                    result,
+                    [2.0, 1.0],
+            )
+
+

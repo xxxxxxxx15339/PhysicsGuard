@@ -91,6 +91,31 @@ class AdvectionResult:
         """Largest measured |a|*dt/dx; zero for stationary/no-step runs."""
         return float(np.max(abs(self.config.speed) * self.time_steps / self.config.dx, initial=0.0))
 
+def _courant_number(speed: float, dx: float, dt: float) -> float: 
+    """Compute |speed|*dt/dx without avoidable overflow."""
+    a = abs(speed) 
+
+    if a == 0.0 or dt == 0.0: 
+        return 0.0 
+    
+    if a <= dx: 
+        courant = dt * (a/dx)
+        if courant == 0.0: 
+            courant = float(
+                    Fraction(dt) * Fraction(a) / Fraction(dx)
+                    )
+    else: 
+        maximum_dt = dx / a 
+
+        if maximum_dt == 0.0 or dt > maximum_dt:
+            raise ValueError("CFL limit Violated")
+
+        courant = dt / maximum_dt 
+
+    if courant > 1.0: 
+        raise ValueError("CFL limit violated")
+
+    return courant 
 
 def step_upwind(
     averages: ArrayLike, *, speed: float, dx: float, dt: float
@@ -116,11 +141,18 @@ def step_upwind(
     # rounded product |a|*dt/dx. The final ratio may differ by an ulp from 1.
     if timestep > width / abs(velocity):
         raise ValueError("dt violates the CFL limit |speed|*dt/dx <= 1")
-    faces = upwind_flux(values, np.roll(values, -1), speed=velocity)
+    
+    courant = _courant_number(velocity, width, timestep)
+
+    normalized_flux = upwind_flux(values, np.roll(values, -1), speed=1.0 if velocity > 0.0 else -1.0)
     with np.errstate(over="raise", invalid="raise", divide="raise"):
-        advanced = values - (timestep / width) * (faces - np.roll(faces, 1))
+        advanced = values - courant * (
+                normalized_flux - np.roll(normalized_flux, 1) 
+        )
+
+
     if not np.all(np.isfinite(advanced)):
-        raise FloatingPointError("advection update produced nonfinite values")
+        raise FloatingPointError("nonfinite advection result")
     return advanced
 
 
