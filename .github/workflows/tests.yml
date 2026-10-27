@@ -33,7 +33,10 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Check Python syntax
-        run: python -m compileall -q src tests
+        run: python -m compileall -q src tests benchmarks
 
       - name: Run scientific tests
         run: python -m pytest -q
+
+      - name: Run deterministic PhysicsBugBench evaluation
+        run: python -m benchmarks.physicsbugbench.evaluate --output artifacts/physicsbugbench-evaluator.json --public-output artifacts/physicsbugbench-development.json

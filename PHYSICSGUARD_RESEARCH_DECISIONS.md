@@ -2,6 +2,11 @@
 
 Date: October 27, 2026. Internal hackathon planning. Not a claim of novel research.
 
+Current implementation update: Milestones 1 and 2 are implemented locally. The
+owner's Milestone 2 scope approved six distinct faults and three correct controls;
+the larger corpus below remains a future target. No Meta integration or repair
+success is implied. See `docs/milestone2_validation.md` for measured evidence.
+
 ## Product
 Investigate and repair pre-existing numerical PDE code through agent-chosen experiments, localized changes, and independent hidden scientific verification. Primary user: numerical computing researcher/engineering developer. The MVP is constrained to finite-volume 1D linear advection and, if time, inviscid Burgers.
 

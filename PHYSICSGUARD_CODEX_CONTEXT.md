@@ -1,5 +1,10 @@
 # PhysicsGuard — Complete Context Handoff for Codex
 
+> Status update, Oct 27, 2026: this is the historical scaffold handoff. Milestone 1
+> and the separately authorized Milestone 2 are now implemented locally. Current
+> capabilities and measured limits are in README and `docs/milestone2_validation.md`.
+> The original planning instructions below are retained as historical context.
+
 > **This is a project handoff, not a request to implement the project.**
 > Read and understand the context, inspect the existing repository if available, and return an architecture/roadmap summary. **Do not create, modify, or delete source files, install packages, run network operations, make commits, push to GitHub, or start implementation until I give you a separate, explicit implementation task.**
 
@@ -43,7 +48,10 @@ From the organizers' rules and official kickoff slides provided to the project:
 
 ## 3. Current development status — do not hallucinate progress
 
-**As of October 27, 2026, this repository is a scaffold ONLY.** We explicitly decided to create the structure without implementing application code. The structure ZIP was produced at this stage. Implementation files in the ZIP are empty placeholders, not working features; the README simply says that implementation has not started. There is no verified Meta integration, solver, diagnostic, API, frontend, or deployed application yet. Do not describe any of these as completed.
+**At the initial handoff this repository was scaffold only.** That historical
+state is superseded by the authorized Milestone 1 solver and Milestone 2
+diagnostics/benchmark implementation. Meta integration, repairs, API, frontend
+workflow and deployment still do not exist.
 
 I want to work **architecture-first, milestone-by-milestone**. For this initial handoff, **read, summarize, and plan only**. Wait for an explicit subsequent instruction such as "Implement Milestone 1" before writing any implementation.
 

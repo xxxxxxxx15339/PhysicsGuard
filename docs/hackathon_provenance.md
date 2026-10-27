@@ -30,6 +30,30 @@ runtime and packaging. These external tools are not hackathon inventions.
 
 ## Evidence and limits
 
+On October 27, 2026, the owner separately authorized **Milestone 2** against
+baseline `d2159cff40a84a27b2e5a996b1b8fe6cc1d5a072`. Newly written work adds:
+
+- Typed physics/strategy/experiment/execution/diagnostic records and strict JSON.
+- Independent conservation, analytical accuracy, direction, conditional
+  stability/boundedness, refinement and metamorphic diagnostics.
+- Bounded trusted-callable experiments and independent square-pulse integrals.
+- Six controlled fault implementations, three correct control cases, a seeded
+  parameter holdout, development-only evidence export and measured evaluation.
+- Scientific tests, CI benchmark invocation, documentation and a robust
+  `max_cfl` measurement (without changing the trusted update algorithm).
+
+The sine truncation bound and square-pulse BV/random-walk bound are derived from
+standard numerical analysis, not claimed as new mathematics. Paper ideas are
+attributed in [research inspirations](research_inspirations.md). The local study
+copies of AutoPDE, AutoNumerics and DiffPDE were consulted; GAV §§3.1–3.3 was
+consulted through its primary arXiv HTML. No external solver/source, research
+results, images or additional assets were copied or redistributed. No packages
+were added, no credentials accessed and no model API credits spent. There is
+no fault-localization, repair-success or model-performance result in this phase.
+
+[Milestone 2 validation](milestone2_validation.md) records measured results and
+limitations. Work remains uncommitted until separately approved by the owner.
+
 [Validation](milestone1_validation.md) records actual computations and the tested
 environment. It does not claim defect localization, repair, a Meta integration,
 independent hidden verification, an API, or an interactive application. There were
@@ -42,9 +66,9 @@ restrictions. No upstream code reuse is authorized by a citation alone.
 
 ## Publication review still required
 
-The three local research PDFs are already tracked in the pre-milestone commit
-`23e467c`. The new ignore patterns prevent new study copies from being added by
-default; they do not remove tracked files or prior history. AutoNumerics' arXiv
+The three research PDFs exist in historical commit `23e467c`. They are absent
+from the approved baseline's tracked tree; local `papers/` study copies are
+ignored. Ignore patterns do not remove historical blobs. AutoNumerics' arXiv
 non-exclusive distribution grant is not a general redistribution permission.
 Review paper removal/permissions and repository history before a public release.
 This milestone does not remove existing tracked PDFs or rewrite history.

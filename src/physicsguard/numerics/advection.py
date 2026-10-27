@@ -88,8 +88,15 @@ class AdvectionResult:
 
     @property
     def max_cfl(self) -> float:
-        """Largest measured |a|*dt/dx; zero for stationary/no-step runs."""
-        return float(np.max(abs(self.config.speed) * self.time_steps / self.config.dx, initial=0.0))
+        """Largest measured Courant number without intermediate overflow/underflow.
+
+        The largest timestep suffices because speed and dx are constant. Exact
+        binary-float ratios avoid losing a subnormal product before division.
+        """
+        if not self.time_steps.size or self.config.speed == 0.0:
+            return 0.0
+        return float(Fraction(abs(self.config.speed)) * Fraction(float(max(self.time_steps)))
+                     / Fraction(self.config.dx))
 
 def _courant_number(speed: float, dx: float, dt: float) -> float: 
     """Compute |speed|*dt/dx without avoidable overflow."""

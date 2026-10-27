@@ -27,6 +27,11 @@ work. Preserve applicable licenses/notices when redistributing dependencies;
 no dependency source is vendored here. FastAPI, Pydantic, model SDKs, and other
 future components have not been added by Milestone 1.
 
+Milestone 2 uses the same dependencies plus Python's standard-library dataclasses,
+JSON, timing and seeded random utilities. No new runtime/test dependency, copied
+upstream code, license change or additional redistributed paper asset was added.
+The same local Python/NumPy/pytest versions were used for Milestone 2 validation.
+
 ## Research repositories: read-only references
 
 Audit observations from October 27, 2026. No upstream source, prompts, datasets,
@@ -54,8 +59,9 @@ clear separately credited third-party figures.
 AutoNumerics uses [arXiv's non-exclusive distribution license](https://arxiv.org/licenses/nonexclusive-distrib/1.0/license.html).
 That grant permits arXiv distribution; it is not a general republication license.
 Study copies should remain outside the public submission. Existing PDFs are
-already tracked in commit `23e467c`; `.gitignore` alone cannot remove them or their
-history. See [provenance](hackathon_provenance.md) for the outstanding release review.
+present in historical commit `23e467c`, although absent from the approved
+baseline's tracked tree; `.gitignore` alone cannot remove history. See
+[provenance](hackathon_provenance.md) for the outstanding release review.
 
 PhysicsGuard's own project license has not yet been selected. This document is
 an audit record, not a claim that all release obligations have been completed.

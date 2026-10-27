@@ -3,11 +3,12 @@
 An AI scientific debugging agent for investigating numerical PDE solver errors,
 proposing localized repairs, and verifying them with independent experiments.
 
-**Current status: Milestone 1 numerical foundation implemented.** The package
+**Current status: Milestone 2 diagnostics and PhysicsBugBench implemented locally.** The package
 solves source-free periodic 1D linear advection with a first-order conservative
 finite-volume upwind method and forward Euler. It includes exact sine-wave cell
-averages and deterministic scientific regression tests. The debugging agent,
-diagnostic reporting, repairs, API, and interactive application remain planned.
+averages, deterministic scientific diagnostics and bounded experiment execution.
+PhysicsBugBench contains six controlled faults and three correct controls. The
+debugging agent, repairs, API and interactive application remain planned.
 
 ## Project layout
 
@@ -19,6 +20,7 @@ docs/
 ├── hackathon_provenance.md
 ├── demo_plan.md
 ├── milestone1_validation.md
+├── milestone2_validation.md
 ├── research_inspirations.md
 └── third_party.md
 src/
@@ -61,6 +63,11 @@ pyproject.toml
 README.md
 ```
 
+Milestone 2 also adds evaluator tooling under `benchmarks/physicsbugbench/`,
+diagnostic modules for stability, invariance, refinement and suite orchestration,
+an investigator evidence exporter, and experiment/benchmark tests. See the
+[benchmark catalog](benchmarks/physicsbugbench/README.md) for all six injected faults.
+
 Python package directories include `__init__.py` files. Empty directories include
 `.gitkeep` files so Git preserves the layout.
 
@@ -75,7 +82,7 @@ python -m pip install -e '.[dev]'
 ```
 
 NumPy is the only runtime dependency. No API credentials are needed for
-Milestone 1. Use `.env.example` to document future configuration variables; local
+Milestones 1–2. Use `.env.example` to document future configuration variables; local
 `.env` files are ignored by Git.
 
 Run the numerical tests or the complete collected suite:
@@ -86,7 +93,57 @@ python -m pytest -q
 ```
 
 Pytest can import the source tree without installing it; normal library use
-requires the editable install above. Tests for later components are placeholders.
+requires the editable install above. API and agent tests remain placeholders.
+
+## Reproduce PhysicsBugBench
+
+After the editable install, run from the repository root:
+
+```sh
+python -m pytest -q
+python -m benchmarks.physicsbugbench.evaluate \
+  --seed 20261027 \
+  --output artifacts/physicsbugbench-evaluator.json \
+  --public-output artifacts/physicsbugbench-development.json
+```
+
+The evaluator file includes ground-truth labels, held-out experiments and full
+measurements. Keep it **outside the investigator environment**. The development
+file contains opaque solver IDs, PDE/strategy records, actual inputs/outputs and
+diagnostics. It omits labels, source locations, patches and held-out evidence.
+The exporter rejects reports marked evaluator-only. Benchmark code is excluded
+from the installed `physicsguard` wheel and runs as repository-local tooling.
+
+The seeded holdout varies parameters, using the same six fault implementations.
+A published seed is reproducibility information, not a security boundary or
+evidence of unseen-fault generalization. A future investigator process must have
+no filesystem/import/network access to benchmark code, evaluator artifacts or
+private evaluation inputs. No investigator process or execution sandbox exists
+in this milestone; trusted callables run locally. See the
+[boundary and scientific assumptions](docs/milestone2_validation.md).
+
+The recorded run detected **6/6 faults** and flagged **0/3 correct controls** in
+each split. It retained **32 inconclusive diagnostic results per split**; an
+inconclusive result does not establish correctness. These are controlled-fixture
+results, without fault-localization, repair or model-performance claims.
+Scientific measurements and verdicts replay deterministically in the tested
+environment; measured runtimes vary.
+
+For a single supported solver:
+
+```python
+from physicsguard.diagnostics.suite import diagnose_solver
+from physicsguard.experiments.scenarios import development_cases
+from physicsguard.numerics import solve_advection
+
+report = diagnose_solver(solve_advection, "reference", development_cases())
+print(report.to_json())
+```
+
+Diagnostic L1/L2 are **absolute domain-integrated** norms:
+`L1=dx*sum(abs(error))`, `L2=sqrt(dx*sum(error**2))`; Linf is `max(abs(error))`.
+The Milestone 1 convergence example below uses grid-normalized norms instead;
+they agree numerically on a unit-length domain.
 
 ## Run an advection experiment
 
@@ -157,8 +214,8 @@ See [recorded validation](docs/milestone1_validation.md) for actual measurements
 the tested environment, acceptance criteria, and untested scope. Direct dependency
 versions for that environment are recorded in [third-party attribution](docs/third_party.md).
 
-Open `web/index.html` to view the static placeholder. No API server or command-line
-entry point is configured yet.
+Open `web/index.html` to view the static placeholder. No API server is configured;
+the benchmark CLI above is available.
 
 See [architecture](docs/architecture.md),
 [hackathon provenance](docs/hackathon_provenance.md), and

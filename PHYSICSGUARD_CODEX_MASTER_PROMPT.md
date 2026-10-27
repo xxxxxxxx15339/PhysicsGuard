@@ -1,5 +1,9 @@
 # PHYSICSGUARD — MASTER RESEARCH-TO-IMPLEMENTATION PROMPT FOR CODEX
 
+> Historical architecture/audit prompt. Current update, Oct 27, 2026: Milestones 1
+> and 2 have since been separately authorized and implemented locally. README and
+> `docs/milestone2_validation.md` describe actual capabilities and limitations.
+
 Date: October 27, 2026. Hackathon submission deadline: November 4, 2026, 9:00 PM ET.
 
 ## YOUR ROLE

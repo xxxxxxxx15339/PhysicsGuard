@@ -1,7 +1,8 @@
 # Demo plan
 
-The application is scaffolded. The following is a proposed demo sequence to
-develop alongside the implementation:
+The numerical engine, scientific diagnostics and controlled benchmark are
+implemented through Milestone 2. The application/agent/repair workflow below
+remains a proposed demo sequence:
 
 1. Select an advection scenario.
 2. Run the baseline numerical experiment.

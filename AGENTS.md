@@ -6,7 +6,11 @@
 
 PhysicsGuard is a NEW project for the Meta Global AI Developer Hackathon, Oct 26–Nov 4, 2026. Intended entry: **Indie Developer** track, **Push the Frontier** theme. It is an AI-assisted debugging agent for scientific numerical simulations: run mathematical diagnostics, have a real Meta-powered agent reason over failures and propose narrowly scoped repairs, and independently verify each candidate fix by rerunning simulations. **The mathematical verification engine, not the LLM, determines whether a repair works.**
 
-As of Oct 27, 2026, the repository is **scaffold only**: placeholder Python/HTML/JS/CSS files are empty. No working solver, diagnostic, model integration, API, UI or deployment exists. Do not imply otherwise.
+As of Oct 27, 2026, **Milestones 1 and 2 are implemented locally**: the trusted
+advection solver, deterministic scientific diagnostics, bounded experiment runner,
+and PhysicsBugBench fault/control evaluation exist. See the milestone validation
+documents for executed evidence. Model integration, repairs, API, UI workflow
+and deployment remain unimplemented. Do not imply otherwise.
 
 Before working, read `README.md` and the relevant architecture/provenance documents under `docs/` if they have content. The complete historical handoff is in `PHYSICSGUARD_CODEX_CONTEXT.md` if placed in the root (or supplied in chat).
 

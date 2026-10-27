@@ -28,3 +28,34 @@ The exact reference follows analytic integration of a periodic travelling sine
 wave over each cell. These established methods do not depend on any of the five
 systems' source code. No forcing interface, Burgers solver, learned numerical
 method, model integration, or benchmark result is implied by this milestone.
+
+## Milestone 2 application of the research
+
+The earlier table describes Milestone 1's state. The separately authorized
+Milestone 2 now implements these original adaptations:
+
+- **GAV §§3.1–3.3, pp. 4–6; Appendix C.2:** analytical references remain owned by
+  diagnostics, and measured development feedback is separated from final scoring.
+  `experiments/scenarios.py`, `diagnostics/accuracy.py` and the evaluator implement
+  that evidence boundary. No learned generator, source-term MMS, interactive
+  model-directed testing or inherited theoretical guarantee is claimed. GAV's
+  primary arXiv HTML was reread for this phase.
+- **AutoPDE §5, pp. 5–6, Fig. 4:** `PhysicsSpecification`, `SolverStrategy` and
+  `ExperimentCase` separate physical requirements from numerical assumptions.
+  These are experiment contracts for debugging existing code, not a solver
+  generation system. The local supplied PDF's strategy/pilot sections were read.
+- **AutoNumerics §§2.2–2.3, pp. 2–3:** `diagnostics/suite.py` runs inexpensive
+  coarse cases before refinement and metamorphic probes. Multiple independent
+  measurements replace reliance on execution success or a reused discrete
+  residual. No agent team, fresh solver generation or assumption that every
+  fine-grid failure is a stability problem is adopted. Sections were read from
+  the local supplied PDF.
+- **DiffPDE §§4.1, 4.3, p. 1172; Appendix A, p. 1180:** localized repair remains
+  deferred. Each diagnostic now links to its supporting experiment IDs, while
+  benchmark fault locations/answers stay out of investigator evidence. A failed
+  measurement alone does not justify a source span. The local PDF was consulted;
+  no diffusion model or source-editing implementation is used.
+
+The smooth upwind truncation envelope and square-pulse BV translation bound are
+independent mathematical derivations described in [validation](milestone2_validation.md).
+None of the measured PhysicsBugBench results is taken from these papers.
