@@ -3,8 +3,8 @@
 from time import perf_counter
 from dataclasses import replace
 
-from physicsguard.experiments.runner import execute_solver, validate_budget
-from physicsguard.experiments.scenarios import refinement_cases
+from physicsguard.experiments.runner import execute_generated, execute_solver, validate_budget
+from physicsguard.experiments.scenarios import REFINEMENT_CELLS
 from physicsguard.schemas.results import DiagnosticReport, ExperimentCase
 from ._common import measure_safely
 from .accuracy import analytical_accuracy, transport_direction
@@ -44,11 +44,12 @@ def diagnose_solver(solver, solver_id, cases, *, audience="evaluator_only") -> D
         checks.extend(replace(measure_safely(d.diagnostic_id, d.description, lambda: d),
                               case_ids=(case.case_id,)) for d in stability(run))
     smooth = next((c for c in cases if c.profile == "sine" and c.mode == 1), cases[0])
-    refined = tuple(execute_solver(solver, solver_id, c) for c in refinement_cases(smooth))
+    refined = tuple(execute_generated(solver, solver_id, f"{smooth.case_id}-n{n}",
+                                      lambda n=n: replace(smooth, n_cells=n)) for n in REFINEMENT_CELLS)
     runs.extend(refined)
     checks.append(replace(measure_safely("refinement", "Observed smooth-grid convergence",
                                         lambda: grid_refinement(refined)),
-                          case_ids=tuple(r.case.case_id for r in refined)))
+                          case_ids=tuple(r.case_id for r in refined)))
     invariants, extra = metamorphic_checks(solver, solver_id, smooth)
     runs.extend(extra)
     checks.extend(invariants)

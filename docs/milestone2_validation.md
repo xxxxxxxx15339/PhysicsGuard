@@ -1,5 +1,12 @@
 # Milestone 2 — scientific diagnostics and PhysicsBugBench
 
+> Historical local validation: the October 27 measurements below are preserved.
+> Subsequently Milestone 2 was committed/pushed as
+> `be4a422bc28bf8bce8aafdb219327102fa497a67`; the owner reports its GitHub Actions
+> matrix passed on Python 3.11, 3.12 and 3.13. Statements about uncommitted work or
+> remote checks below describe the time of the original validation, not the
+> current GitHub state. New Milestone 2.1 results are recorded separately below.
+
 Recorded October 27, 2026, from actual local execution against approved baseline
 `d2159cff40a84a27b2e5a996b1b8fe6cc1d5a072` plus the uncommitted Milestone 2 changes.
 No commits, pushes, deployments, credentials or paid model calls were made.
@@ -252,3 +259,17 @@ independent candidate verification**, with immutable originals, narrow reversibl
 changes, verifier-owned tests and process/resource isolation before executing
 any untrusted candidate. Fault localization needs its own evidence and evaluation.
 Meta integration remains a separately authorized later milestone.
+
+## Milestone 2.1 follow-up validation
+
+The separately authorized correction milestone starts from published commit
+`be4a422bc28bf8bce8aafdb219327102fa497a67`. It fixes generated-experiment
+validation failures aborting the suite, records unavailable attempts distinctly,
+and adds challenging correct controls and explicit evaluation categories.
+
+The [follow-up report](milestone2_1_validation.md) records new tests, both seeds,
+the contract/fault-signature audit and remaining execution-boundary requirements.
+No historical measurements above have been replaced with follow-up measurements.
+No acceptance tolerance or mathematical formula was relaxed; the trusted solver
+and six fault implementations are unchanged. These corrections remain local and
+uncommitted until separately approved; they are not a claim of a new remote CI run.

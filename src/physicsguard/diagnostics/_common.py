@@ -4,7 +4,7 @@ from math import fsum
 
 import numpy as np
 
-from physicsguard.schemas.results import DiagnosticResult, SolverExecutionResult
+from physicsguard.schemas.results import DiagnosticResult, ExperimentAttempt, SolverExecutionResult
 
 EPS = float(np.finfo(float).eps)
 ASSUMPTIONS = ("source-free constant-speed scalar advection", "periodic uniform finite-volume cell averages")
@@ -44,6 +44,12 @@ def execution_issue(run: SolverExecutionResult, identifier: str, description: st
     if run.status != "success":
         return unavailable(identifier, description, run.error or "execution evidence unavailable")
     return None
+
+
+def attempt_errors(attempts: tuple[ExperimentAttempt, ...]) -> tuple[str, ...]:
+    """Attach identifiers and failure kinds to each unavailable piece of evidence."""
+    return tuple(f"{run.case_id} [{run.error_kind}]: {run.error}" for run in attempts
+                 if run.status != "success")
 
 
 def measure_safely(identifier: str, description: str, computation) -> DiagnosticResult:

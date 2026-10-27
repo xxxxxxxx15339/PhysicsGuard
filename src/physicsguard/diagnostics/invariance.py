@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import numpy as np
 
-from physicsguard.experiments.runner import execute_solver
+from physicsguard.experiments.runner import execute_generated
 from physicsguard.schemas.results import DiagnosticResult, ExperimentCase
-from ._common import ASSUMPTIONS, amplitude_scale, measure_safely, roundoff_tolerance, unavailable
+from ._common import ASSUMPTIONS, amplitude_scale, attempt_errors, measure_safely, roundoff_tolerance, unavailable
 
 
 def metamorphic_checks(solver, solver_id: str, case: ExperimentCase):
@@ -17,17 +17,16 @@ def metamorphic_checks(solver, solver_id: str, case: ExperimentCase):
     runs = []
     checks = []
 
-    def run(name, values, config_case=case):
-        execution = execute_solver(solver, solver_id, replace(config_case, case_id=f"{case.case_id}-{name}"), values)
+    def run(name, values, case_factory=lambda: case):
+        execution = execute_generated(solver, solver_id, f"{case.case_id}-{name}", case_factory, values)
         runs.append(execution)
         return execution
 
     def compare(identifier, description, left, right, expected, support=()):
         evidence = ((left,) if right is None else (left, right)) + support
         if any(r.status != "success" for r in evidence):
-            checks.append(replace(unavailable(identifier, description, "; ".join(
-                r.error or "missing output" for r in evidence if r.status != "success")),
-                case_ids=tuple(r.case.case_id for r in evidence)))
+            checks.append(replace(unavailable(identifier, description, "; ".join(attempt_errors(evidence))),
+                case_ids=tuple(r.case_id for r in evidence)))
             return
         def measurement():
             target = expected()
@@ -40,7 +39,7 @@ def metamorphic_checks(solver, solver_id: str, case: ExperimentCase):
                 {"max_difference": case.physics.field_unit}, "Maximum absolute difference <= tolerance",
                 tolerance, "4*sum(gamma_k*field_scale) across compared runs allows combined rounding")
         checks.append(replace(measure_safely(identifier, description, measurement),
-                              case_ids=tuple(r.case.case_id for r in evidence)))
+                              case_ids=tuple(r.case_id for r in evidence)))
 
     # Fixed algebraic, non-symmetric data exercises the seam and high frequencies.
     x = np.arange(case.n_cells, dtype=float)
@@ -55,30 +54,23 @@ def metamorphic_checks(solver, solver_id: str, case: ExperimentCase):
             lambda: np.roll(base.final_averages, 7))
     other = run("other", second)
     combined = run("linear", first - 0.4 * second)
-    if other.status != "success":
-        checks.append(replace(unavailable("linearity", "Linear superposition", other.error or "No second run"),
-                              case_ids=(combined.case.case_id, base.case.case_id, other.case.case_id)))
-    else:
-        compare("linearity", "Linear superposition", combined, base,
-                lambda: np.asarray(base.final_averages) - 0.4 * np.asarray(other.final_averages), (other,))
+    compare("linearity", "Linear superposition", combined, base,
+            lambda: np.asarray(base.final_averages) - 0.4 * np.asarray(other.final_averages), (other,))
     length = case.physics.x_max - case.physics.x_min
-    scaled_case = replace(case, physics=replace(case.physics, x_min=2.0,
-                                               x_max=2.0 + 3 * length, speed=3 * case.physics.speed))
-    scaled = run("space-scale", first, scaled_case)
+    scaled = run("space-scale", first, lambda: replace(case, physics=replace(case.physics, x_min=2.0,
+                            x_max=2.0 + 3 * length, speed=3 * case.physics.speed)))
     compare("space_scaling", "Consistent domain/velocity scaling", scaled, base,
             lambda: np.asarray(base.final_averages))
-    time_case = replace(case, physics=replace(case.physics, speed=case.physics.speed / 2),
-                        final_time=case.final_time * 2)
-    rescaled = run("time-scale", first, time_case)
+    rescaled = run("time-scale", first, lambda: replace(case,
+                  physics=replace(case.physics, speed=case.physics.speed / 2), final_time=case.final_time * 2))
     compare("time_scaling", "Consistent time/velocity scaling", rescaled, base,
             lambda: np.asarray(base.final_averages))
     if case.physics.speed == 0:
         checks.append(unavailable("periodic_wrap", "One-cell transport across periodic seam",
                                   "Requires nonzero speed", applicable=False))
     else:
-        dt = case.config().dx / abs(case.physics.speed)
-        seam_case = replace(case, cfl=1.0, final_time=dt)
-        seam = run("periodic-wrap", first, seam_case)
+        seam = run("periodic-wrap", first, lambda: replace(case, cfl=1.0,
+                    final_time=case.config().dx / abs(case.physics.speed)))
         compare("periodic_wrap", "One-cell transport across periodic seam", seam, None,
                 lambda: np.roll(first, 1 if case.physics.speed > 0 else -1))
     return tuple(checks), tuple(runs)

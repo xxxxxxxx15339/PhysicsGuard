@@ -114,6 +114,29 @@ class SolverExecutionResult(JsonRecord):
     error: str | None = None
     error_kind: Literal["nonfinite_output", "execution_error"] | None = None
 
+    @property
+    def case_id(self) -> str:
+        return self.case.case_id
+
+
+@dataclass(frozen=True)
+class UnavailableExperiment(JsonRecord):
+    """An infeasible generated request; the solver was never invoked.
+
+    ``case`` is absent only when constructing the derived controls itself failed.
+    Retain its intended identifier and validation reason even in that situation.
+    Elapsed time measures preparation/validation, not solver execution.
+    """
+    case_id: str
+    error: str
+    elapsed_seconds: float
+    case: ExperimentCase | None = None
+    status: Literal["unavailable"] = "unavailable"
+    error_kind: Literal["generated_validation_error"] = "generated_validation_error"
+
+
+ExperimentAttempt = SolverExecutionResult | UnavailableExperiment
+
 
 @dataclass(frozen=True)
 class DiagnosticResult(JsonRecord):
@@ -135,7 +158,7 @@ class DiagnosticResult(JsonRecord):
 class DiagnosticReport(JsonRecord):
     solver_id: str
     cases: tuple[ExperimentCase, ...]
-    executions: tuple[SolverExecutionResult, ...]
+    executions: tuple[ExperimentAttempt, ...]
     diagnostics: tuple[DiagnosticResult, ...]
     elapsed_seconds: float
     audience: Literal["investigator", "evaluator_only"] = "evaluator_only"

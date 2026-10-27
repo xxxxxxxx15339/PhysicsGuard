@@ -3,12 +3,17 @@
 An AI scientific debugging agent for investigating numerical PDE solver errors,
 proposing localized repairs, and verifying them with independent experiments.
 
-**Current status: Milestone 2 diagnostics and PhysicsBugBench implemented locally.** The package
+**Current status: Milestone 2 published; Milestone 2.1 corrections implemented locally.** The package
 solves source-free periodic 1D linear advection with a first-order conservative
 finite-volume upwind method and forward Euler. It includes exact sine-wave cell
 averages, deterministic scientific diagnostics and bounded experiment execution.
-PhysicsBugBench contains six controlled faults and three correct controls. The
+PhysicsBugBench contains six controlled faults, three original correct control
+groups and four additional challenging correct groups. The
 debugging agent, repairs, API and interactive application remain planned.
+
+Published Milestone 2 baseline: `be4a422bc28bf8bce8aafdb219327102fa497a67`.
+The owner reports its GitHub Actions matrix passed on Python 3.11, 3.12 and 3.13.
+Milestone 2.1 results below are new local checks; this follow-up has not been pushed.
 
 ## Project layout
 
@@ -105,6 +110,10 @@ python -m benchmarks.physicsbugbench.evaluate \
   --seed 20261027 \
   --output artifacts/physicsbugbench-evaluator.json \
   --public-output artifacts/physicsbugbench-development.json
+python -m benchmarks.physicsbugbench.evaluate \
+  --seed 20261028 \
+  --output artifacts/physicsbugbench-evaluator-20261028.json \
+  --public-output artifacts/physicsbugbench-development-20261028.json
 ```
 
 The evaluator file includes ground-truth labels, held-out experiments and full
@@ -119,15 +128,34 @@ A published seed is reproducibility information, not a security boundary or
 evidence of unseen-fault generalization. A future investigator process must have
 no filesystem/import/network access to benchmark code, evaluator artifacts or
 private evaluation inputs. No investigator process or execution sandbox exists
-in this milestone; trusted callables run locally. See the
+in this milestone; trusted callables run locally. Package exclusion and audience
+tags prevent accidental export, not hostile access. No genuinely private holdout
+has been deployed. See the
 [boundary and scientific assumptions](docs/milestone2_validation.md).
 
-The recorded run detected **6/6 faults** and flagged **0/3 correct controls** in
+The original October 27 run detected **6/6 faults** and flagged **0/3 correct controls** in
 each split. It retained **32 inconclusive diagnostic results per split**; an
 inconclusive result does not establish correctness. These are controlled-fixture
 results, without fault-localization, repair or model-performance claims.
 Scientific measurements and verdicts replay deterministically in the tested
 environment; measured runtimes vary.
+
+Milestone 2.1 retains those legacy results for seeds **20261027 and 20261028**.
+Both runs also flag **0/4 challenging correct groups** despite visible diffusion,
+coarse-grid error, multiple periodic crossings and pulse smearing. These controls
+use the same trusted implementation; they do not establish cross-solver coverage.
+The evaluator's `evaluation_categories` separates known injected-fault detection,
+new parameter configurations and correct-control false positives. Detection of
+genuinely unseen fault mechanisms is explicitly **unevaluated**, with a null rate.
+There is no combined generalization score. The additive report changes use JSON
+schema version 2. See [follow-up validation](docs/milestone2_1_validation.md).
+
+Caller-invalid cases still raise before solver execution. Automatically generated
+experiments retain the same resource limits: infeasible requests are recorded
+with `status="unavailable"`, their intended case ID and validation reason. Dependent
+diagnostics become inconclusive, and valid evidence and unrelated checks remain
+available. Such attempts are counted separately from actual executions, solver
+errors, nonfinite outputs and valid scientific failures.
 
 For a single supported solver:
 

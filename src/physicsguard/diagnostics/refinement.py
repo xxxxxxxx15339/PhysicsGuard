@@ -3,15 +3,15 @@
 from math import log
 
 from physicsguard.experiments.scenarios import cell_averages
-from physicsguard.schemas.results import DiagnosticResult, SolverExecutionResult
-from ._common import ASSUMPTIONS, amplitude_scale, norm_errors, roundoff_tolerance, unavailable
+from physicsguard.schemas.results import DiagnosticResult, ExperimentAttempt
+from ._common import ASSUMPTIONS, amplitude_scale, attempt_errors, norm_errors, roundoff_tolerance, unavailable
 from .accuracy import matches_reference_initial
 
 
-def grid_refinement(runs: tuple[SolverExecutionResult, ...]) -> DiagnosticResult:
+def grid_refinement(runs: tuple[ExperimentAttempt, ...]) -> DiagnosticResult:
     if len(runs) < 3 or any(r.status != "success" for r in runs):
         return unavailable("refinement", "Observed smooth-grid convergence",
-                           "Need three successful compatible resolutions")
+                           "; ".join(attempt_errors(runs)) or "Need three successful compatible resolutions")
     if any(not matches_reference_initial(run) for run in runs):
         return unavailable("refinement", "Observed smooth-grid convergence",
                            "Initial data do not match the declared analytical profile", applicable=False)

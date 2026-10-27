@@ -2,15 +2,16 @@
 
 from math import fsum
 from fractions import Fraction
+from dataclasses import replace
 from time import perf_counter
-from typing import Protocol
+from typing import Callable, Protocol
 
 import numpy as np
 
 from physicsguard.numerics import AdvectionConfig, AdvectionResult
 from physicsguard.numerics._validation import real_vector
 from physicsguard.numerics.advection import _time_steps
-from physicsguard.schemas.results import ExperimentCase, SolverExecutionResult
+from physicsguard.schemas.results import ExperimentCase, ExperimentAttempt, SolverExecutionResult, UnavailableExperiment
 from .scenarios import cell_averages
 
 
@@ -44,7 +45,9 @@ def execute_solver(solver: Solver, solver_id: str, case: ExperimentCase,
 
     Work is bounded before invoking our trusted fixtures. No hard wall timeout
     or protection against malicious callables is claimed. Future untrusted
-    execution needs a separate resource-limited process/container.
+    execution needs a separate resource-limited process/container. The caller
+    must supply trusted, reviewed callables: this entry point does not accept
+    source text, patches, model output or arbitrary import paths.
     """
     validate_budget(case)
     if not isinstance(solver_id, str) or not solver_id:
@@ -87,3 +90,24 @@ def execute_solver(solver: Solver, solver_id: str, case: ExperimentCase,
                                      original, error=f"{type(error).__name__}: {error}",
                                      error_kind="nonfinite_output" if isinstance(error, _NonfiniteOutput)
                                      else "execution_error")
+
+
+def execute_generated(solver: Solver, solver_id: str, case_id: str,
+                      case_factory: Callable[[], ExperimentCase], initial_override=None) -> ExperimentAttempt:
+    """Prepare one internal probe, reusing the ordinary runner's validation.
+
+    Invalid caller requests must use execute_solver and still raise. Only
+    internally generated requests use this helper. Construction/input/budget
+    failures become unavailable attempts; errors raised by the solver remain
+    execution_error/nonfinite_output records from execute_solver. No limits are
+    increased and no generated validation error is a scientific failure. The
+    case factory is trusted internal Python, never source supplied by a model.
+    """
+    started = perf_counter()
+    case = None
+    try:
+        case = replace(case_factory(), case_id=case_id)
+        return execute_solver(solver, solver_id, case, initial_override)
+    except (ValueError, ArithmeticError) as error:
+        return UnavailableExperiment(case_id, f"{type(error).__name__}: {error}",
+                                     perf_counter() - started, case)

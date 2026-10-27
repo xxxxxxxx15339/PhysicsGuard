@@ -17,6 +17,7 @@ from physicsguard.experiments.public import investigator_view
 from physicsguard.experiments.scenarios import development_cases
 from physicsguard.schemas.results import ExperimentCase, PhysicsSpecification
 from .variants import ENTRIES
+from .controls import CHALLENGING_CONTROLS
 
 
 def heldout_cases(seed: int) -> tuple[ExperimentCase, ...]:
@@ -63,6 +64,8 @@ def score_reports(pairs):
             row["applicable"] += int(d.applicable)
     counts = Counter(d.status for _, report in pairs for d in report.diagnostics)
     total = sum(counts.values())
+    attempts = [run for _, report in pairs for run in report.executions]
+    executions = [run for run in attempts if run.status != "unavailable"]
     def basic_outcomes(report):
         return [any(d.status == "fail" and d.case_ids == (case.case_id,) for d in report.diagnostics)
                 for case in report.cases]
@@ -85,10 +88,11 @@ def score_reports(pairs):
         "inconclusive_diagnostics": counts["inconclusive"],
         "reports_with_inconclusive_evidence": sum(r.inconclusive_count > 0 for _, r in pairs),
         "fully_inconclusive_reports": sum(all(d.status == "inconclusive" for d in r.diagnostics) for _, r in pairs),
-        "execution_errors": sum(run.status == "error" for _, r in pairs for run in r.executions),
-        "execution_count": sum(len(r.executions) for _, r in pairs),
-        "solver_elapsed_seconds": sum(run.elapsed_seconds for _, r in pairs for run in r.executions),
-        "median_execution_seconds": median(run.elapsed_seconds for _, r in pairs for run in r.executions),
+        "execution_errors": sum(run.status == "error" for run in executions),
+        "execution_count": len(executions),
+        "generated_unavailable_attempts": len(attempts) - len(executions),
+        "solver_elapsed_seconds": sum(run.elapsed_seconds for run in executions),
+        "median_execution_seconds": median(run.elapsed_seconds for run in executions) if executions else None,
         "suite_elapsed_seconds": sum(r.elapsed_seconds for _, r in pairs),
     }
 
@@ -101,8 +105,8 @@ def evaluate(seed: int = 20261027):
     """
     started = perf_counter()
     evaluation = heldout_cases(seed)  # Fix samples before inspecting outcomes.
-    public = {"schema_version": 1, "reports": []}
-    private = {"schema_version": 1, "seed": seed, "evaluation_kind": "deterministic diagnostics only",
+    public = {"schema_version": 2, "reports": []}
+    private = {"schema_version": 2, "seed": seed, "evaluation_kind": "deterministic diagnostics only",
                "environment": {"python": platform.python_version(), "numpy": np.__version__},
                "split_kind": "parameter holdout, same fault implementations", "splits": {}}
     # Opaque handles avoid advertising benchmark answers in investigator records.
@@ -119,6 +123,35 @@ def evaluate(seed: int = 20261027):
             if split == "development":
                 public["reports"].append(investigator_view(report))
         private["splits"][split] = {"metrics": score_reports(pairs), "outcomes": reports}
+    challenging = []
+    for index, (entry, case) in enumerate(CHALLENGING_CONTROLS, start=len(ENTRIES)):
+        report = diagnose_solver(entry.solver, f"solver-{index:03d}", (case,), audience="investigator")
+        challenging.append((entry, report))
+        public["reports"].append(investigator_view(report))
+    private["challenging_controls"] = {
+        "sampling": "fixed published cases; independent of holdout seed",
+        "metrics": score_reports(challenging),
+        "outcomes": [{"benchmark_id": entry.benchmark_id, "fault_type": None,
+                      "detected": report.detected, "report": report.to_dict()} for entry, report in challenging],
+    }
+    private["evaluation_categories"] = {
+        "known_injected_faults": {"status": "evaluated", "split": "development",
+                                  "detection": private["splits"]["development"]["metrics"]["fault_detection"]},
+        "unseen_parameter_configurations": {
+            "status": "evaluated", "split": "heldout",
+            "detection": private["splits"]["heldout"]["metrics"]["fault_detection"],
+            "limitation": "Same six known fault implementations; published seeded parameters are not secret",
+        },
+        "unseen_fault_mechanisms": {"status": "unevaluated", "total": 0, "rate": None,
+                                   "reason": "No independently held-out fault mechanisms are tested"},
+        "correct_implementation_false_positives": {
+            "status": "evaluated",
+            "development": private["splits"]["development"]["metrics"]["false_positives"],
+            "parameter_holdout": private["splits"]["heldout"]["metrics"]["false_positives"],
+            "challenging_controls": private["challenging_controls"]["metrics"]["false_positives"],
+            "limitation": "All controls use the same trusted upwind implementation",
+        },
+    }
     private["elapsed_seconds"] = perf_counter() - started
     return private, public
 
@@ -135,7 +168,10 @@ def main():
     args.output.write_text(json.dumps(private, allow_nan=False, sort_keys=True, indent=2) + "\n")
     if args.public_output:
         args.public_output.write_text(json.dumps(public, allow_nan=False, sort_keys=True, indent=2) + "\n")
-    print(json.dumps({name: split["metrics"] for name, split in private["splits"].items()},
+    summary = {name: split["metrics"] for name, split in private["splits"].items()}
+    summary["challenging_controls"] = private["challenging_controls"]["metrics"]
+    summary["evaluation_categories"] = private["evaluation_categories"]
+    print(json.dumps(summary,
                      allow_nan=False, sort_keys=True, indent=2))
 
 

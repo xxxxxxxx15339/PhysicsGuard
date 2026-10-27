@@ -7,6 +7,11 @@ Milestone 1 implements the deterministic numerical foundation. Milestone 2 adds
 diagnostic evidence, controlled experiment execution and PhysicsBugBench. The
 model-driven investigation and repair workflow remains planned.
 
+Milestone 2 is published as `be4a422bc28bf8bce8aafdb219327102fa497a67`; the
+owner reports the 3.11/3.12/3.13 CI matrix passed. Milestone 2.1 changes are local
+follow-up work; see [new validation](milestone2_1_validation.md). The matrix,
+dependencies and trusted numerical solver are unchanged.
+
 | Package | Responsibility | Status |
 | --- | --- | --- |
 | `api` | Expose application endpoints. | Planned |
@@ -128,6 +133,43 @@ is reproducible but is not secret or an unseen-fault evaluation.
 
 See [Milestone 2 validation](milestone2_validation.md) for formulas, real metrics,
 known blind spots, file inventory and reproduction commands.
+
+## Milestone 2.1 generated experiment handling
+
+`execute_solver` remains a trusted-callable runner. `execute_generated` is a
+small internal wrapper around that same validation/execution path. It constructs
+each derived case inside its own error boundary; it never increases budgets.
+Invalid caller cases are all prevalidated before any solver is invoked.
+
+| Outcome | Execution record | Scientific interpretation |
+| --- | --- | --- |
+| Invalid caller input | Raises `ValueError` before execution | No accepted experiment request |
+| Infeasible generated controls/budget | `UnavailableExperiment`, status `unavailable`, kind `generated_validation_error` | Dependent properties inconclusive; retain ID/reason |
+| Solver exception or invalid returned contract | Status `error`, kind `execution_error` | Output unavailable; no automatic scientific failure |
+| Confirmed returned NaN/Inf | Status `error`, kind `nonfinite_output` | Finite-output property fails |
+| Successful run with measured violation | Status `success`, failed `DiagnosticResult` | Scientific failure under its declared assumptions; no exact localization claim |
+
+Unavailable attempts retain a validated case when one could be constructed;
+otherwise `case=null` and the intended case ID/reason remain. They contain no
+invented outputs or solver runtime. Their elapsed time measures preparation and
+validation. Actual execution counts/timing exclude them. Refinement keeps any
+successful levels and reports missing evidence; each metamorphic comparison
+checks its own dependencies so one skipped transformation cannot abort another.
+
+The benchmark retains the original six faults/three control groups and adds a
+separate four-group challenging-control evaluation. Categories distinguish known
+faults from new parameter samples and unseen mechanisms (currently unevaluated).
+They are not pooled into a generalization score or a newly enlarged legacy FPR.
+All added controls still use the trusted first-order implementation.
+
+No secure execution or private-holdout deployment is implemented here. Before
+untrusted candidate execution, the next milestone must provide a separate process
+or container, hard timeouts, CPU/memory limits, filesystem/network restrictions,
+immutable originals, reversible patch application, and verifier-owned tests that
+the investigator cannot access. Python imports, dataclass audience tags and public
+benchmark sources do not enforce that boundary. Only trusted reviewed callables
+and internal case factories may enter the current runner; no source-text/model
+execution interface is added.
 
 ## Later debugging workflow
 

@@ -7,6 +7,8 @@ import numpy as np
 from physicsguard.numerics import sine_cell_averages
 from physicsguard.schemas.results import ExperimentCase, PhysicsSpecification
 
+REFINEMENT_CELLS = (64, 128, 256)
+
 
 def cell_averages(case: ExperimentCase, time: float = 0.0, *, reverse: bool = False) -> np.ndarray:
     edges = case.config().cell_edges()
@@ -37,4 +39,4 @@ def development_cases() -> tuple[ExperimentCase, ...]:
 
 def refinement_cases(case: ExperimentCase) -> tuple[ExperimentCase, ...]:
     return tuple(replace(case, case_id=f"{case.case_id}-n{n}", n_cells=n)
-                 for n in (64, 128, 256))
+                 for n in REFINEMENT_CELLS)

@@ -51,8 +51,30 @@ results, images or additional assets were copied or redistributed. No packages
 were added, no credentials accessed and no model API credits spent. There is
 no fault-localization, repair-success or model-performance result in this phase.
 
-[Milestone 2 validation](milestone2_validation.md) records measured results and
-limitations. Work remains uncommitted until separately approved by the owner.
+[Milestone 2 validation](milestone2_validation.md) records the original local
+measurements and limitations. At that validation the work was uncommitted; it
+was subsequently committed and pushed as
+`be4a422bc28bf8bce8aafdb219327102fa497a67`. The owner reports that baseline's
+GitHub Actions passed on Python 3.11, 3.12 and 3.13. This does not retroactively
+turn the original local measurements into GitHub measurements.
+
+## Milestone 2.1 follow-up
+
+The owner separately authorized corrections against that published Milestone 2
+baseline. New work provides one shared internal generated-experiment helper,
+typed unavailable-attempt evidence, independent continuation of refinement and
+metamorphic probes, four challenging correct control groups, explicit evaluation
+categories and regression tests. It preserves the numerical solver, all six fault
+implementations, mathematical formulas, acceptance tolerances and original
+benchmark scores. Both seeds 20261027 and 20261028 are evaluated from actual runs.
+
+[Follow-up validation](milestone2_1_validation.md) contains the new test outcomes,
+measured scores and contract audit. Unseen fault mechanisms remain unevaluated;
+the publicly reproducible parameter split is not a genuinely private holdout.
+No new dependencies, copied code/assets, licensing changes, source-text execution,
+model calls, credentials or API credits are involved. No repair, agent, API or UI
+workflow has been implemented. This correction work is local and uncommitted;
+no new push, deployment or remote CI run was performed during this milestone.
 
 [Validation](milestone1_validation.md) records actual computations and the tested
 environment. It does not claim defect localization, repair, a Meta integration,
