@@ -24,6 +24,11 @@ dist/
 /artifacts/*
 !/artifacts/.gitkeep
 
+# Research PDFs: private study copies, not public submission assets.
+# These patterns do not remove files already tracked in Git.
+/papers/
+/docs/*.pdf
+
 # Operating system files
 .DS_Store
 Thumbs.db
