@@ -7,6 +7,10 @@
 > remote checks below describe the time of the original validation, not the
 > current GitHub state. New Milestone 2.1 results are recorded separately below.
 
+> Subsequent status: Milestone 2.1 is also published as `46b6e78` with the
+> owner-reported 3.11/3.12/3.13 CI pass. New source-repair results are in
+> [Milestone 3 validation](milestone3_validation.md), without changing these numbers.
+
 Recorded October 27, 2026, from actual local execution against approved baseline
 `d2159cff40a84a27b2e5a996b1b8fe6cc1d5a072` plus the uncommitted Milestone 2 changes.
 No commits, pushes, deployments, credentials or paid model calls were made.

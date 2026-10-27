@@ -39,6 +39,20 @@ def validate_budget(case: ExperimentCase) -> None:
     case.config().cell_edges()
 
 
+def validate_cases(cases) -> tuple[ExperimentCase, ...]:
+    """Common caller preflight for in-process and source-worker orchestration."""
+    try:
+        cases = tuple(cases)
+    except TypeError as error:
+        raise ValueError("cases must be an iterable of ExperimentCase records") from error
+    if (not cases or len(cases) > 16 or not all(isinstance(c, ExperimentCase) for c in cases)
+            or len({c.case_id for c in cases}) != len(cases)):
+        raise ValueError("provide 1..16 cases with distinct case IDs")
+    for case in cases:
+        validate_budget(case)
+    return cases
+
+
 def execute_solver(solver: Solver, solver_id: str, case: ExperimentCase,
                    initial_override=None) -> SolverExecutionResult:
     """Invalid requests raise; candidate failures become explicit execution evidence.

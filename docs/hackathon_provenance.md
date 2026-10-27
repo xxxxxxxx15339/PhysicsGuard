@@ -73,8 +73,40 @@ measured scores and contract audit. Unseen fault mechanisms remain unevaluated;
 the publicly reproducible parameter split is not a genuinely private holdout.
 No new dependencies, copied code/assets, licensing changes, source-text execution,
 model calls, credentials or API credits are involved. No repair, agent, API or UI
-workflow has been implemented. This correction work is local and uncommitted;
-no new push, deployment or remote CI run was performed during this milestone.
+workflow was implemented in Milestone 2.1. At that validation the correction work was uncommitted;
+no new push, deployment or remote CI run was performed during that local milestone.
+The owner subsequently published it as
+`46b6e78c19b0bf37aa15e2c14d91fce2a1d971ef` and reports its GitHub Actions passed
+on Python 3.11, 3.12 and 3.13. The original local timings are not CI measurements.
+
+## Milestones 2.2 and 3
+
+Separately authorized against that published baseline, this phase adds newly
+authored standalone direct-upwind source fixtures, typed source repair records,
+deterministic AST/evidence-based localization rules, one-expression diffs,
+disposable source copies, reviewed-source subprocess execution, an independent
+scientific gate, bounded internal tool methods and a measured source-repair
+benchmark. All new source is developed in this hackathon workspace. No upstream
+research implementation or pre-hackathon solver/results/assets were copied.
+
+Fixtures share only existing validated configuration/result records and the
+time-step scheduler. Their direct neighbor-difference update is newly written;
+candidate patches change source expressions instead of replacing a solver with
+the trusted implementation. The original six-branch corpus, trusted numerical
+solver, analytical references and diagnostic thresholds are preserved. Standard
+AST, hashing, subprocess, POSIX resource-limit and tempfile facilities are Python
+dependencies, not claimed research inventions. No new packages or licenses were
+introduced and no additional research assets were redistributed.
+
+Proposals are explicitly deterministic or human negative-test controls, not Meta
+reasoning. Public verifier cases are withheld from the proposer but are not
+securely hidden from a hostile host process. Source recognition and repair scores
+cover known patterns; unseen mechanisms remain unevaluated. Resource-limited
+subprocesses are not an arbitrary-source sandbox, and Meta-origin execution is
+disabled. [New validation](milestone3_validation.md) contains real examples,
+rejected/inconclusive proposals, metrics, integrity and test evidence. These
+changes remain uncommitted; no commit/push/publish/deployment or paid API call
+was performed. Model integration, general autonomy, FastAPI and UI remain planned.
 
 [Validation](milestone1_validation.md) records actual computations and the tested
 environment. It does not claim defect localization, repair, a Meta integration,

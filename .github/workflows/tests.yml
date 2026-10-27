@@ -40,3 +40,6 @@ jobs:
 
       - name: Run deterministic PhysicsBugBench evaluation
         run: python -m benchmarks.physicsbugbench.evaluate --output artifacts/physicsbugbench-evaluator.json --public-output artifacts/physicsbugbench-development.json
+
+      - name: Run reviewed source repair evaluation
+        run: python -m benchmarks.source_repair.evaluate --output artifacts/source-repair-evaluator.json

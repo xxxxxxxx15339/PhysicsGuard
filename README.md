@@ -3,17 +3,19 @@
 An AI scientific debugging agent for investigating numerical PDE solver errors,
 proposing localized repairs, and verifying them with independent experiments.
 
-**Current status: Milestone 2 published; Milestone 2.1 corrections implemented locally.** The package
+**Current status: Milestone 2.1 published; Milestones 2.2/3 implemented locally for reviewed source fixtures.** The package
 solves source-free periodic 1D linear advection with a first-order conservative
 finite-volume upwind method and forward Euler. It includes exact sine-wave cell
 averages, deterministic scientific diagnostics and bounded experiment execution.
 PhysicsBugBench contains six controlled faults, three original correct control
 groups and four additional challenging correct groups. The
-debugging agent, repairs, API and interactive application remain planned.
+Meta investigator, general autonomous repair, API and interactive application
+remain planned. The deterministic source-repair demonstration below is implemented.
 
-Published Milestone 2 baseline: `be4a422bc28bf8bce8aafdb219327102fa497a67`.
+Published Milestone 2.1 baseline: `46b6e78c19b0bf37aa15e2c14d91fce2a1d971ef`.
 The owner reports its GitHub Actions matrix passed on Python 3.11, 3.12 and 3.13.
-Milestone 2.1 results below are new local checks; this follow-up has not been pushed.
+The original local Milestone 2.1 results remain historical evidence. Milestones
+2.2/3 changes and their new validation are local and have not been committed/pushed.
 
 ## Project layout
 
@@ -87,7 +89,7 @@ python -m pip install -e '.[dev]'
 ```
 
 NumPy is the only runtime dependency. No API credentials are needed for
-Milestones 1–2. Use `.env.example` to document future configuration variables; local
+Milestones 1–3. Use `.env.example` to document future configuration variables; local
 `.env` files are ignored by Git.
 
 Run the numerical tests or the complete collected suite:
@@ -172,6 +174,60 @@ Diagnostic L1/L2 are **absolute domain-integrated** norms:
 `L1=dx*sum(abs(error))`, `L2=sqrt(dx*sum(error**2))`; Linf is `max(abs(error))`.
 The Milestone 1 convergence example below uses grid-normalized norms instead;
 they agree numerically on a unit-length domain.
+
+## Reproduce source-code repair
+
+After an editable install, run from the repository root on non-root Linux:
+
+```sh
+python -m pytest tests/test_source_repair.py -q
+python -m benchmarks.source_repair.evaluate --output artifacts/source-repair-evaluator.json
+```
+
+Alternatively prefix the CLI with `PYTHONPATH=src` without installation. Four new
+standalone modules under `benchmarks/source_fixtures/` contain three numerical
+defects and one correct control. The original six-branch PhysicsBugBench corpus
+is unchanged. The source benchmark measures **3/3 detected, localized, proposed
+and independently accepted repairs**, each replacing one source line. The
+correct control abstains. Ten bad/unsupported proposal controls produce **8
+rejections, 2 inconclusive decisions and zero acceptances**. These populations
+are scored separately; unseen source mutation patterns remain unevaluated.
+
+For one source file:
+
+```python
+from physicsguard.repair.sources import default_source_store
+from physicsguard.repair.workflow import repair_source
+
+report = repair_source(default_source_store(), "solver_01.py")
+attempt = report.attempts[0]
+print(attempt.proposal.unified_diff)
+print(attempt.verification.decision)
+print(report.original_integrity, report.workspaces_cleaned)
+```
+
+The pipeline inspects a hashed source snapshot, runs development diagnostics,
+uses explicit deterministic AST rules to propose one localized expression edit,
+applies it only to a disposable copy, and invokes an independent scientific gate.
+The gate reruns development regressions and additional signed-velocity, profile,
+grid, domain and observation-time cases that were not given to the proposer.
+It accepts from actual measured properties, without requiring every error norm
+to decrease. Original source files are never patched. The full JSON retains
+source regions, diffs, hashes, measurements, decisions and cleanup/integrity
+results. It belongs to the evaluator; the future investigator tool surface
+returns development evidence and a verification summary without additional-case
+parameters or answers.
+
+Execution supports **only four hash-pinned reviewed originals and one restricted
+assignment-expression change**. Child processes have hard wall timeouts, a
+sanitized environment and POSIX CPU/address-space/file/process limits. They share
+the host UID/filesystem/network: this is **not an arbitrary-code sandbox**.
+Model-origin execution is disabled. A future private deployment must isolate
+verifier assets and candidate execution at the OS level. No Meta calls, arbitrary
+source uploads, autonomous model repairs, FastAPI or UI are implemented.
+
+See [source repair architecture and measured validation](docs/milestone3_validation.md)
+and the [fixture/evaluator provenance](benchmarks/source_fixtures/README.md).
 
 ## Run an advection experiment
 

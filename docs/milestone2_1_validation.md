@@ -1,5 +1,11 @@
 # Milestone 2.1 — corrections and benchmark credibility
 
+> Historical local validation retained unchanged below. Milestone 2.1 was later
+> committed/pushed as `46b6e78c19b0bf37aa15e2c14d91fce2a1d971ef`; the owner reports
+> GitHub Actions passed on Python 3.11, 3.12 and 3.13. Statements below describing
+> uncommitted work or unrun remote checks refer to the original validation time.
+> [Milestones 2.2/3 validation](milestone3_validation.md) records the new local work.
+
 Follow-up recorded October 27, 2026 against published Milestone 2 baseline
 `be4a422bc28bf8bce8aafdb219327102fa497a67`. The owner reports that baseline's
 GitHub Actions passed on Python 3.11, 3.12 and 3.13. The measurements below are

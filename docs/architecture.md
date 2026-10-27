@@ -5,12 +5,14 @@ and a separate web interface under `web`.
 
 Milestone 1 implements the deterministic numerical foundation. Milestone 2 adds
 diagnostic evidence, controlled experiment execution and PhysicsBugBench. The
-model-driven investigation and repair workflow remains planned.
+Meta-driven investigation and general repository repair remain planned. Milestone
+3 implements a deterministic source-repair workflow for reviewed local fixtures.
 
-Milestone 2 is published as `be4a422bc28bf8bce8aafdb219327102fa497a67`; the
-owner reports the 3.11/3.12/3.13 CI matrix passed. Milestone 2.1 changes are local
-follow-up work; see [new validation](milestone2_1_validation.md). The matrix,
-dependencies and trusted numerical solver are unchanged.
+Milestone 2.1 is published as `46b6e78c19b0bf37aa15e2c14d91fce2a1d971ef`; the
+owner reports that baseline's 3.11/3.12/3.13 CI matrix passed. Earlier local
+measurements remain historical records. Milestones 2.2/3 are new local work;
+see [source repair validation](milestone3_validation.md). The matrix, dependencies,
+trusted numerical solver and diagnostic acceptance thresholds are unchanged.
 
 | Package | Responsibility | Status |
 | --- | --- | --- |
@@ -18,9 +20,9 @@ dependencies and trusted numerical solver are unchanged.
 | `agent` | Interpret evidence, choose experiments, propose localized repairs. | Planned |
 | `numerics` | Advection, interface fluxes, and exact cell-average references. | Milestone 1 |
 | `diagnostics` | Independent conservation, accuracy, direction, stability, refinement and invariance measurements. | Milestone 2 |
-| `repair` | Restrict changes, preserve originals, create reversible candidates. | Planned |
+| `repair` | Inspect reviewed source, propose bounded expression edits, verify disposable candidates in subprocesses. | Milestone 3, deterministic fixture scope |
 | `experiments` | Bounded trusted-callable execution, analytic scenarios, public evidence projection. | Milestone 2 |
-| `schemas` | Typed physics, strategy, experiment, execution and diagnostic records. | Milestone 2; proposals deferred |
+| `schemas` | Physics/experiment evidence plus source, proposal, patch and verification records. | Milestones 2/3 |
 | `benchmarks/physicsbugbench` | Fault fixtures, control cases, parameter holdout and private scoring. | Milestone 2; excluded from installed package |
 
 Tests live in `tests`, usage examples in `examples`, and generated outputs in
@@ -185,3 +187,62 @@ verification are different records. A verified outcome means a specified suite
 passed, not a mathematical proof. These contracts and execution boundaries are
 design decisions for subsequent milestones beyond the Milestone 2 evidence
 contracts and trusted execution described above.
+
+## Milestone 3 source repair
+
+The immutable source store accepts exactly four reviewed original hashes and
+neutral file IDs. Standalone source fixtures implement a direct upwind difference,
+sharing the validated configuration/result and timestep scheduler with Milestone 1.
+They do not call the trusted solver or reuse the original six-branch fault corpus.
+New files contain localized direction, dx-scaling and positive-seam mistakes plus
+a correct control. Evaluator labels and expected locations are separate from the
+proposer and tool interface.
+
+`proposals.py` consumes a source snapshot and development evidence. Three explicit
+AST/source-pattern rules require matching failed scientific diagnostics before
+proposing an edit. Hypotheses include the source function/line and evidence IDs;
+their origin is deterministic. This is limited rule-based localization, not an
+LLM investigation or arbitrary Python debugging. The correct fixture receives
+no proposal. Unknown patterns or insufficient evidence yield no justified repair.
+
+`policy.py` accepts one existing assignment RHS inside `advance`, with a bounded
+arithmetic/conditional/subscript grammar. It checks original/proposed hashes,
+structured edit and canonical single-hunk unified diff, full AST integrity outside
+that expression, and syntax. Calls, attributes, new imports, extra statements,
+wholesale solver replacement and unrelated paths are rejected. Path reads reject
+symlinks/hardlinks; temporary source writes use atomic rename. Disposable copies
+are read-only during execution. Originals are never written; concurrent owner
+edits are detected and left untouched. Cleanup and integrity are recorded.
+
+`executor.py` runs a persistent reviewed worker in a separate non-root Linux
+process, with sanitized environment, controlled cwd, bounded JSON pipes, per-call
+wall deadlines, process-group termination and POSIX CPU/address-space/process/file
+limits. The child independently rechecks the original hash and candidate AST.
+Only solver calls run there; parent-owned diagnostics compute the scientific
+verdicts. Parent/child calls reuse ordinary experiment validation and preserve
+execution error versus confirmed nonfinite versus generated-unavailable evidence.
+The collection preflight was factored into `validate_cases`; its numerical and
+resource criteria are unchanged.
+
+`validator.py` owns an additional six-case plan, separate from proposal generation.
+It refuses repeated development configurations (including generated probes),
+requires the mandatory scientific families, compares original and candidate on
+the same additional cases, reruns development regressions, and checks previously
+passing properties for new failure/lost evidence. Norms need not decrease in every
+case. Valid candidate execution alone cannot accept a repair. Required unavailable
+evidence yields INCONCLUSIVE; invalid source, failed mathematical criteria or new
+regressions yield REJECTED. ACCEPTED requires observed independent baseline failures
+resolved by the candidate, sufficient evidence and no observed regression.
+
+Full repair reports belong to the evaluator. `RepairTools` exposes bounded source
+inspection, development experiments/reports, deterministic proposal generation,
+verification summaries and history. It does not expose the verifier's case
+parameters, measurements or answer registry, and repeated run IDs cannot bypass
+the experiment budget. There is no model client, source upload endpoint, API or UI.
+
+This worker is not an arbitrary-code sandbox: host filesystem/network access and
+host UID are shared; resource/import/AST checks do not replace OS isolation.
+Arbitrary Meta-origin execution is disabled. Public fixture hashes, public
+verification-case definitions and audience tags do not make genuinely private
+evaluation. Before untrusted integration, isolate mounts/network/credentials and
+verifier assets in an independently enforced execution boundary.

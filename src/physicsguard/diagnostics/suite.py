@@ -3,9 +3,9 @@
 from time import perf_counter
 from dataclasses import replace
 
-from physicsguard.experiments.runner import execute_generated, execute_solver, validate_budget
+from physicsguard.experiments.runner import execute_generated, execute_solver, validate_cases
 from physicsguard.experiments.scenarios import REFINEMENT_CELLS
-from physicsguard.schemas.results import DiagnosticReport, ExperimentCase
+from physicsguard.schemas.results import DiagnosticReport
 from ._common import measure_safely
 from .accuracy import analytical_accuracy, transport_direction
 from .conservation import conservation
@@ -20,17 +20,9 @@ def diagnose_solver(solver, solver_id, cases, *, audience="evaluator_only") -> D
     Each supplied development case gets the basic families. The first suitable
     smooth case also gets three refinement levels and metamorphic checks.
     """
-    try:
-        cases = tuple(cases)
-    except TypeError as error:
-        raise ValueError("cases must be an iterable of ExperimentCase records") from error
+    cases = validate_cases(cases)
     if audience not in ("investigator", "evaluator_only"):
         raise ValueError("unsupported report audience")
-    if (not cases or len(cases) > 16 or not all(isinstance(c, ExperimentCase) for c in cases)
-            or len({c.case_id for c in cases}) != len(cases)):
-        raise ValueError("provide 1..16 cases with distinct case IDs")
-    for case in cases:
-        validate_budget(case)
     started = perf_counter()
     runs = []
     checks = []
