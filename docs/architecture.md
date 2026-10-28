@@ -8,10 +8,10 @@ diagnostic evidence, controlled experiment execution and PhysicsBugBench. The
 Meta-driven investigation and general repository repair remain planned. Milestone
 3 implements a deterministic source-repair workflow for reviewed local fixtures.
 
-Milestone 2.1 is published as `46b6e78c19b0bf37aa15e2c14d91fce2a1d971ef`; the
+Milestone 3 is published as `622c9cd1ac11e9247a4746555faed3a9485f1abf`; the
 owner reports that baseline's 3.11/3.12/3.13 CI matrix passed. Earlier local
-measurements remain historical records. Milestones 2.2/3 are new local work;
-see [source repair validation](milestone3_validation.md). The matrix, dependencies,
+measurements remain historical records. Milestone 3.1 is local hardening;
+see [follow-up validation](milestone3_1_validation.md). The matrix, dependencies,
 trusted numerical solver and diagnostic acceptance thresholds are unchanged.
 
 | Package | Responsibility | Status |
@@ -246,3 +246,52 @@ Arbitrary Meta-origin execution is disabled. Public fixture hashes, public
 verification-case definitions and audience tags do not make genuinely private
 evaluation. Before untrusted integration, isolate mounts/network/credentials and
 verifier assets in an independently enforced execution boundary.
+
+
+## Milestone 3.1 enforced contracts and remaining boundaries
+
+`policy.py` admits one assignment RHS with at most 48 AST nodes/depth 10. Numeric
+literals must be finite and bounded by 128. Powers, whole-array arithmetic,
+dynamic indices, calls and attributes are excluded; boundary reads are limited
+to `state[0]`/`state[-1]` and neighbor selections to adjacent signed offsets.
+Division is limited to cell width or a nonzero bounded literal. These are source
+policy limits, not changes to scientific tolerances. Full AST, diff, structured
+edit, hypothesis target and both hashes must agree.
+
+Source reads anchor traversal through no-follow directory descriptors and check
+regular-file identity before/after reading. The worker compiles exactly the
+hash-checked bytes, rather than reopening a path with an import loader. Each IPC
+request/reply binds a source hash and ordinal to bounded finite JSON; duplicate
+keys and mismatched configuration/array/clock evidence are protocol failures.
+Terminal workers are killed/reaped, including process groups whose leader exited.
+Neither these checks nor read-only file mode resist every hostile same-UID action;
+immutable OS mounts and process/credential separation remain necessary.
+
+The production verifier owns its plan and recomputes original-source development
+evidence. An explicitly internal test hook can replace plans; JSON tools cannot
+reach it. Plan validation rejects duplicate/development configurations, missing
+families and unsupported numerical strategies, and requires signed smooth
+transport, multiple profiles, grids and domains. `coverage.py` requires the exact
+expected per-case diagnostic records, not one family pass anywhere in a report.
+Direction applicability is independently recomputed; stationary/ambiguous cases
+remain legitimately inapplicable. Applicable missing/inconclusive evidence blocks
+acceptance. No numerical formula or threshold was changed.
+
+Workspace integrity checks run on normal and exceptional exits, then resources
+are cleaned. Integrity/cleanup failures are attached to an existing body exception
+rather than replacing it. Original owner edits are never restored over.
+
+`RepairTools.call` is the bounded JSON dispatch adapter. It exposes development
+evidence and sanitized verification decision/stages/history, not verifier cases,
+reports or detailed private failure reasons. A model can select one supported
+operation; host rules produce the patch with truthful deterministic provenance.
+Raw Meta-origin source execution remains disabled. Python method privacy and
+this adapter are not OS isolation; give a future investigator only serialized
+messages from a separate host, never the store/tool instance or evaluator imports.
+
+Source-format probes are static inspection/syntax experiments, not worker repairs
+on new originals. Two independently structured correct controls run as trusted
+evaluator callables and remain outside the reviewed-source allowlist. Unknown
+mechanisms remain unevaluated. The optional [container recipe](../dev/README.md)
+was not executed because Docker/Podman were unavailable. Its image contains public
+verifier assets and must not become the investigator's filesystem.

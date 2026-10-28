@@ -5,6 +5,7 @@ These rules recognize explicit source patterns; they are not model reasoning or
 general-purpose numerical fault localization.
 """
 import ast
+import json
 
 from physicsguard.schemas.repairs import FaultHypothesis, RepairProposal, SourceSnapshot
 from physicsguard.schemas.results import DiagnosticReport
@@ -19,7 +20,8 @@ def make_proposal(snapshot: SourceSnapshot, hypothesis: FaultHypothesis, new_lin
     lines[hypothesis.start_line-1] = new_line + "\n"
     proposed = "".join(lines)
     digest = source_hash(proposed)
-    return RepairProposal("proposal-"+digest[:16], snapshot.source_file, snapshot.sha256, digest,
+    identity = json.dumps([snapshot.source_file, snapshot.sha256, digest, hypothesis.to_dict()], sort_keys=True)
+    return RepairProposal("proposal-"+source_hash(identity)[:24], snapshot.source_file, snapshot.sha256, digest,
                           hypothesis, hypothesis.start_line, old_line, new_line,
                           localized_diff(snapshot.source_file, snapshot.source_text, proposed),
                           expected_effect, ("independent_physics_suite", "development_regressions"), origin)
@@ -57,6 +59,7 @@ def propose_repair(snapshot: SourceSnapshot, report: DiagnosticReport) -> Repair
             old_line = snapshot.source_text.splitlines()[node.lineno-1]
             # Replace just the RHS in the original physical line; retain the rest of the module.
             prefix = old_line[:value.col_offset]
-            return make_proposal(snapshot, hypothesis, prefix+replacement, origin="deterministic",
+            suffix = old_line[value.end_col_offset:]
+            return make_proposal(snapshot, hypothesis, prefix+replacement+suffix, origin="deterministic",
                                  expected_effect=description)
     return None

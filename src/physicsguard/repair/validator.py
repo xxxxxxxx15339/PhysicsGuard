@@ -1,138 +1,147 @@
-"""Independent measured gate. Proposer assertions never decide acceptance."""
-from dataclasses import asdict
-import json
+"""Host-owned measured verification. Caller reports/plans never authorize repair."""
 from time import perf_counter
 
-from physicsguard.schemas.repairs import (PatchApplicationResult, RepairAttempt, VerificationResult)
+from physicsguard.experiments.scenarios import development_cases as default_development_cases
 from physicsguard.experiments.runner import validate_cases
+from physicsguard.schemas.repairs import PatchApplicationResult, RepairAttempt, VerificationResult
+from .coverage import coverage_gaps
 from .executor import run_source_diagnostics
 from .policy import validate_proposal
 from .sources import source_hash
-from .verification_cases import independent_plan, REQUIRED_DIAGNOSTICS
+from .verification_cases import independent_plan, plan_problem, case_signature
 from .workspace import source_workspace
 
 
-def case_signature(case):
-    values = asdict(case)
-    values.pop("case_id")
-    values.pop("max_steps")
-    return json.dumps(values, sort_keys=True, allow_nan=False)
-
-
 def compare_regressions(before, after, label):
-    keys = lambda d: (d.diagnostic_id, d.case_ids)
-    old = {keys(d): d for d in before.diagnostics}
-    new = {keys(d): d for d in after.diagnostics}
+    old = {(d.diagnostic_id, d.case_ids): d for d in before.diagnostics}
+    new = {(d.diagnostic_id, d.case_ids): d for d in after.diagnostics}
     regressions, lost = [], []
     for key, previous in old.items():
-        if previous.status == "pass":
+        if previous.applicable and previous.status == "pass":
             current = new.get(key)
             identifier = f"{label}:{key[0]}:{','.join(key[1])}"
-            if current is None or current.status == "inconclusive":
+            if current is None or current.status == "inconclusive" or not current.applicable:
                 lost.append(identifier)
             elif current.status == "fail":
                 regressions.append(identifier)
     return tuple(regressions), tuple(lost)
 
 
-def verify_candidate(store, snapshot, proposal, development, development_cases, *, plan=None, timeout_seconds=2.0):
-    """Host-only gate for reviewed one-line deterministic/human fixture edits.
+def verify_candidate(store, snapshot, proposal, *, development_cases=None, timeout_seconds=2.0):
+    """Production host entry: no caller report, custom plan or tolerance argument.
 
-    No benchmark labels/patches are read. Additional cases are owned here, not
-    selected or weakened by a proposal. Arbitrary Meta-origin execution remains
-    disabled until a genuine untrusted-execution boundary is available.
+    Development inputs may describe investigator-requested experiments. The host
+    reruns their original source and always owns the full independent plan.
+    Raw Meta-origin execution remains disabled; provenance is not authorization.
     """
+    cases = default_development_cases() if development_cases is None else validate_cases(development_cases)
+    return _verify(store, snapshot, proposal, cases, independent_plan(), timeout_seconds)
+
+
+def _verify_candidate_for_testing(store, snapshot, proposal, development_cases, *, plan, timeout_seconds=2.0):
+    """Explicit evaluator/test hook, never dispatched by investigator tools.
+
+    Python privacy is not a security boundary. The host must expose only the
+    allowlisted JSON tool dispatcher to a separate future investigator process.
+    """
+    return _verify(store, snapshot, proposal, validate_cases(development_cases), plan, timeout_seconds)
+
+
+def _verify(store, snapshot, proposal, cases, plan, timeout_seconds):
     started = perf_counter()
-    plan = independent_plan() if plan is None else plan
-    stages = {"source": "pending", "execution": "pending", "science": "pending",
-              "additional_cases": "pending", "regressions": "pending"}
+    stages = {name: "pending" for name in ("source", "execution", "science", "additional_cases", "regressions")}
     application = PatchApplicationResult(False, snapshot.sha256, None, proposal.unified_diff, 0)
-    before_additional = after_development = after_additional = None
-    regressions, lost = (), ()
-    paths = []
+    before_development = before_additional = after_development = after_additional = None
+    regressions, lost, paths = (), (), []
     decision, reasons = "INCONCLUSIVE", ("Required evidence is unavailable",)
     try:
         if proposal.origin == "meta":
             stages["source"] = "unsupported"
-            reasons = ("Arbitrary model-origin source execution is disabled in this trusted-fixture milestone",)
+            reasons = ("Raw model-origin source execution is disabled",)
         else:
             proposed = validate_proposal(snapshot, proposal)
             if not store.unchanged(snapshot):
                 raise ValueError("original source changed since inspection")
             stages["source"] = "pass"
-            application = PatchApplicationResult(True, snapshot.sha256, source_hash(proposed), proposal.unified_diff, 1)
-            known = {case_signature(c) for c in development_cases}
-            if development.report:
-                known.update(case_signature(r.case) for r in development.report.executions if r.case is not None)
-            try:
-                validate_cases(plan.additional_cases)
-                feasible_plan = True
-            except ValueError:
-                feasible_plan = False
-            if (not feasible_plan or not set(REQUIRED_DIAGNOSTICS).issubset(plan.required_diagnostics)
-                    or any(case_signature(c) in known for c in plan.additional_cases)):
-                reasons = ("Verification plan lacks independent cases or mandatory diagnostic coverage",)
+            application = PatchApplicationResult(False, snapshot.sha256, source_hash(proposed), proposal.unified_diff, 1)
+            problem = plan_problem(plan, cases)
+            if problem:
                 stages["additional_cases"] = "inconclusive"
+                reasons = (problem,)
             else:
-                with source_workspace(snapshot) as baseline_workspace:
-                    paths.append(baseline_workspace)
-                    before_additional = run_source_diagnostics(baseline_workspace, snapshot.source_file,
-                        plan.additional_cases, timeout_seconds=timeout_seconds)
-                with source_workspace(snapshot, proposed) as workspace:
-                    paths.append(workspace)
-                    after_development = run_source_diagnostics(workspace, snapshot.source_file,
-                        development_cases, timeout_seconds=timeout_seconds, audience="investigator")
-                    after_additional = run_source_diagnostics(workspace, snapshot.source_file,
-                        plan.additional_cases, timeout_seconds=timeout_seconds)
-                runs = (before_additional, after_development, after_additional)
-                if any(r.status in ("timeout", "resource_limit", "unsupported") or r.report is None for r in runs):
-                    reasons = tuple(r.error or r.status for r in runs if r.status != "completed" or r.report is None)
-                    stages["execution"] = "inconclusive"
-                elif not development.report or development.status != "completed":
-                    reasons = ("Development baseline evidence unavailable",)
-                    stages["execution"] = "inconclusive"
+                with source_workspace(snapshot) as root:
+                    paths.append(root)
+                    before_development = run_source_diagnostics(root, snapshot.source_file, cases,
+                        expected_sha256=snapshot.sha256, timeout_seconds=timeout_seconds, audience="investigator")
+                    before_additional = run_source_diagnostics(root, snapshot.source_file, plan.additional_cases,
+                        expected_sha256=snapshot.sha256, timeout_seconds=timeout_seconds)
+                problem = plan_problem(plan, cases, before_development.report)
+                if problem:
+                    reasons = (problem,)
+                    stages["additional_cases"] = "inconclusive"
                 else:
-                    patched = (after_development.report, after_additional.report)
-                    reg_dev, lost_dev = compare_regressions(development.report, patched[0], "development")
-                    reg_add, lost_add = compare_regressions(before_additional.report, patched[1], "additional")
-                    regressions, lost = reg_dev + reg_add, lost_dev + lost_add
-                    execution_errors = any(a.status == "error" for r in patched for a in r.executions)
-                    failures = any(d.status == "fail" for r in patched for d in r.diagnostics)
-                    stages["execution"] = "fail" if execution_errors else "pass"
-                    stages["regressions"] = "fail" if regressions else ("inconclusive" if lost else "pass")
-                    missing = [name for name in plan.required_diagnostics if not any(
-                        d.diagnostic_id == name and d.status == "pass" for d in patched[1].diagnostics)]
-                    unavailable = any(a.status == "unavailable" for r in patched for a in r.executions)
-                    uncertain = any(d.applicable and d.status == "inconclusive" and d.diagnostic_id in plan.required_diagnostics
-                                    for r in patched for d in r.diagnostics)
-                    stages["science"] = "fail" if failures else (
-                        "inconclusive" if execution_errors or missing or unavailable or uncertain else "pass")
-                    stages["additional_cases"] = "fail" if patched[1].detected else (
-                        "inconclusive" if missing or any(a.status != "success" for a in patched[1].executions)
-                        or any(d.applicable and d.status == "inconclusive" for d in patched[1].diagnostics) else "pass")
-                    if execution_errors or failures or regressions:
-                        decision = "REJECTED"
-                        reasons = ("Candidate fails execution, a scientific acceptance criterion, or a previously passing property",)
-                    elif missing or unavailable or uncertain or lost:
-                        reasons = ("Mandatory evidence unavailable or inconclusive: "+", ".join(missing),)
-                        stages["science"] = "inconclusive"
-                    elif any(a.status != "success" for a in before_additional.report.executions):
-                        reasons = ("Independent baseline execution evidence is unavailable",)
-                        stages["additional_cases"] = "inconclusive"
-                    elif not before_additional.report.detected:
-                        decision = "REJECTED"
-                        reasons = ("No independently observed baseline defect justifies accepting a repair",)
+                    with source_workspace(snapshot, proposed) as root:
+                        paths.append(root)
+                        application = PatchApplicationResult(True, snapshot.sha256, proposal.proposed_sha256, proposal.unified_diff, 1)
+                        after_development = run_source_diagnostics(root, snapshot.source_file, cases,
+                            expected_sha256=proposal.proposed_sha256, timeout_seconds=timeout_seconds, audience="investigator")
+                        after_additional = run_source_diagnostics(root, snapshot.source_file, plan.additional_cases,
+                            expected_sha256=proposal.proposed_sha256, timeout_seconds=timeout_seconds)
+                    runs = (before_development, before_additional, after_development, after_additional)
+                    if any(r.status != "completed" or r.report is None for r in runs):
+                        reasons = tuple(r.error or r.status for r in runs if r.status != "completed" or r.report is None)
+                        stages["execution"] = "inconclusive"
                     else:
-                        decision = "ACCEPTED"
-                        reasons = ("Independent additional cases fix observed failures and show no tested regression",)
+                        original = (before_development.report, before_additional.report)
+                        patched = (after_development.report, after_additional.report)
+                        reg_dev, lost_dev = compare_regressions(original[0], patched[0], "development")
+                        reg_add, lost_add = compare_regressions(original[1], patched[1], "additional")
+                        regressions, lost = reg_dev + reg_add, lost_dev + lost_add
+                        baseline_unavailable = any(a.status != "success" for r in original for a in r.executions)
+                        baseline_gaps = coverage_gaps(original[0], cases, require_pass=False) + coverage_gaps(
+                            original[1], plan.additional_cases, require_pass=False)
+                        candidate_errors = any(a.status == "error" for r in patched for a in r.executions)
+                        unavailable = any(a.status == "unavailable" for r in patched for a in r.executions)
+                        failed = sorted({d.diagnostic_id for r in patched for d in r.diagnostics
+                                         if d.applicable and d.status == "fail"})
+                        gaps = coverage_gaps(patched[0], cases, require_pass=True) + coverage_gaps(
+                            patched[1], plan.additional_cases, require_pass=True, require_families=True)
+                        stages["execution"] = "fail" if candidate_errors else "pass"
+                        stages["science"] = "fail" if failed else ("inconclusive" if gaps or unavailable or candidate_errors else "pass")
+                        stages["additional_cases"] = "fail" if patched[1].detected else ("inconclusive" if gaps or unavailable or candidate_errors else "pass")
+                        stages["regressions"] = "fail" if regressions else ("inconclusive" if lost else "pass")
+                        if baseline_unavailable or baseline_gaps:
+                            reasons = ("Independent original-source evidence unavailable",) + baseline_gaps + tuple(
+                                f"{a.case_id}: {a.error}" for r in original for a in r.executions if a.status != "success")
+                            stages["execution"] = "inconclusive"
+                        elif candidate_errors or failed or regressions:
+                            decision = "REJECTED"
+                            reasons = (("Candidate execution contract failed",) if candidate_errors else ()) + (
+                                ("Scientific failures: " + ", ".join(failed),) if failed else ()) + (
+                                ("Previously passing properties regressed",) if regressions else ())
+                        elif gaps or unavailable or lost:
+                            reasons = ("Mandatory verification evidence unavailable",) + gaps
+                        elif not original[1].detected:
+                            decision, reasons = "REJECTED", ("No independently observed baseline defect justifies repair",)
+                        else:
+                            measured_failures = {d.diagnostic_id for d in original[0].diagnostics if d.applicable and d.status == "fail"}
+                            supporting_cases = {c for d in original[0].diagnostics
+                                if d.applicable and d.status == "fail" and d.diagnostic_id in proposal.hypothesis.evidence_ids
+                                for c in d.case_ids}
+                            if (not set(proposal.hypothesis.evidence_ids).issubset(measured_failures)
+                                    or not set(proposal.hypothesis.evidence_case_ids).issubset(supporting_cases)):
+                                decision, reasons = "REJECTED", ("Proposal evidence is not supported by freshly measured development failures",)
+                            else:
+                                decision, reasons = "ACCEPTED", ("Per-case independent evidence resolves failures with no observed regression",)
     except (ValueError, SyntaxError, OSError) as error:
-        decision, reasons = "REJECTED", (f"Source/policy validation failed: {error}",)
+        decision, reasons = "REJECTED", (f"Source/policy/integrity validation failed: {error}",)
         stages["source"] = "fail"
         application = PatchApplicationResult(False, snapshot.sha256, None, proposal.unified_diff, 0, str(error))
     intact = store.unchanged(snapshot)
-    cleaned = all(not p.exists() for p in paths)
+    cleaned = all(not path.exists() for path in paths)
     if not intact or not cleaned:
         decision, reasons = "REJECTED", ("Source integrity or workspace cleanup failed",)
-    result = VerificationResult(decision, plan.plan_id, reasons, stages, before_additional,
-        after_development, after_additional, regressions, lost, perf_counter()-started)
+    plan_id = getattr(plan, "plan_id", "invalid-plan")
+    result = VerificationResult(decision, plan_id, reasons, stages, before_additional,
+        after_development, after_additional, regressions, lost, perf_counter()-started, before_development)
     return RepairAttempt(proposal, application, result, intact, cleaned)

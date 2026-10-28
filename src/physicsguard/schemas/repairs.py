@@ -97,7 +97,9 @@ def parse_proposal(payload: str) -> RepairProposal:
     if not isinstance(payload, str) or len(payload) > 8192:
         raise ValueError("proposal payload exceeds size/type limit")
     try:
-        values = json.loads(payload)
+        # Local import avoids coupling record definitions to the repair executor.
+        from physicsguard.repair.protocol import decode_frame
+        values = decode_frame(payload, 8192)
         values["hypothesis"] = FaultHypothesis(**values["hypothesis"])
         return RepairProposal(**values)
     except (TypeError, KeyError, json.JSONDecodeError) as error:
@@ -120,10 +122,25 @@ class VerificationPlan(JsonRecord):
     additional_cases: tuple[ExperimentCase, ...]
     required_diagnostics: tuple[str, ...]
 
+    def __post_init__(self):
+        if not isinstance(self.plan_id, str) or not self.plan_id or len(self.plan_id) > 128:
+            raise ValueError("bounded verification plan identifier required")
+        if (not isinstance(self.additional_cases, (tuple, list)) or not self.additional_cases
+                or not all(isinstance(c, ExperimentCase) for c in self.additional_cases)):
+            raise ValueError("nonempty typed verification cases required")
+        if len({c.case_id for c in self.additional_cases}) != len(self.additional_cases):
+            raise ValueError("duplicate verification case identifiers")
+        if (not isinstance(self.required_diagnostics, (tuple, list)) or not self.required_diagnostics
+                or not all(isinstance(d, str) and d for d in self.required_diagnostics)
+                or len(set(self.required_diagnostics)) != len(self.required_diagnostics)):
+            raise ValueError("nonempty unique diagnostic identifiers required")
+        object.__setattr__(self, "additional_cases", tuple(self.additional_cases))
+        object.__setattr__(self, "required_diagnostics", tuple(self.required_diagnostics))
+
 
 @dataclass(frozen=True)
 class ProcessRun(JsonRecord):
-    status: Literal["completed", "timeout", "execution_error", "unsupported", "resource_limit"]
+    status: Literal["completed", "timeout", "execution_error", "unsupported", "resource_limit", "protocol_error", "source_mismatch"]
     report: DiagnosticReport | None
     elapsed_seconds: float
     requests: int
@@ -142,6 +159,7 @@ class VerificationResult(JsonRecord):
     regression_ids: tuple[str, ...]
     lost_evidence_ids: tuple[str, ...]
     elapsed_seconds: float
+    before_development: ProcessRun | None = None
 
     def __post_init__(self):
         if self.decision not in ("ACCEPTED", "REJECTED", "INCONCLUSIVE"):

@@ -104,9 +104,12 @@ securely hidden from a hostile host process. Source recognition and repair score
 cover known patterns; unseen mechanisms remain unevaluated. Resource-limited
 subprocesses are not an arbitrary-source sandbox, and Meta-origin execution is
 disabled. [New validation](milestone3_validation.md) contains real examples,
-rejected/inconclusive proposals, metrics, integrity and test evidence. These
-changes remain uncommitted; no commit/push/publish/deployment or paid API call
-was performed. Model integration, general autonomy, FastAPI and UI remain planned.
+rejected/inconclusive proposals, metrics, integrity and test evidence. At that
+validation these changes were uncommitted; no commit/push/publish/deployment or
+paid API call was performed. The owner subsequently published Milestone 3 as
+`622c9cd1ac11e9247a4746555faed3a9485f1abf` and reports its Python
+3.11/3.12/3.13 Actions matrix passed. Original timings remain local measurements.
+Model integration, general autonomy, FastAPI and UI remain planned.
 
 [Validation](milestone1_validation.md) records actual computations and the tested
 environment. It does not claim defect localization, repair, a Meta integration,
@@ -130,3 +133,24 @@ This milestone does not remove existing tracked PDFs or rewrite history.
 No project license has been selected. Final authorship, dependency/transitive
 notices, asset permissions, public-repository access, event rules, and submission
 materials remain release tasks. No commits or publication are made automatically.
+
+
+## Milestone 3.1 follow-up
+
+Authorized hardening against published Milestone 3 preserves the original four
+source fixtures, six-branch defect corpus, numerical solver, reference equations
+and diagnostic thresholds. New work narrows expression policy, binds execution
+to checked source bytes, strengthens per-case host-owned verification, makes
+cleanup exception-safe and supplies finite bounded JSON orchestration. The
+proposer still has exactly three explicit deterministic rules. Structured edit
+selection renders a host rule; it is not model-authored source or Meta reasoning.
+No Meta calls, credentials, new framework/dependency or external repository code
+were used. New correct flux/convex controls and static source-format probes were
+authored here; they reuse only existing configuration/result/time scheduling.
+They do not expand the reviewed-source execution allowlist or prove unseen-bug
+generalization. The container recipe uses standard Docker options with official
+documentation attribution in `dev/README.md`; no runtime was available to test it.
+[Follow-up validation](milestone3_1_validation.md) separates actual local results,
+preserved historical publication/CI claims and untested deployment requirements.
+Milestone 3.1 remains uncommitted/unpushed; no history rewrite, licensing change,
+asset redistribution, publication, deployment or paid API call was performed.

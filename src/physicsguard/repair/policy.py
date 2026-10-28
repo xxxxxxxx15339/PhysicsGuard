@@ -1,10 +1,94 @@
 """One-line arithmetic edits to reviewed fixtures; this is not a Python sandbox."""
 import ast
 import difflib
+import math
 import re
 
 from physicsguard.schemas.repairs import RepairProposal, SourceSnapshot
 from .sources import MAX_SOURCE_BYTES, REVIEWED_HASHES, source_hash
+
+MAX_EXPRESSION_NODES = 48
+MAX_EXPRESSION_DEPTH = 10
+MAX_LITERAL_MAGNITUDE = 128
+
+
+def _numeric_literal(node):
+    if not isinstance(node, ast.Constant) or type(node.value) not in (int, float):
+        return False
+    return abs(node.value) <= MAX_LITERAL_MAGNITUDE and math.isfinite(node.value)
+
+
+def _index(node):
+    if isinstance(node, ast.Constant) and type(node.value) is int and node.value == 0:
+        return True
+    return (isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub)
+            and isinstance(node.operand, ast.Constant) and type(node.operand.value) is int
+            and node.operand.value == 1)
+
+
+def validate_expression(value, target):
+    """Bounded scalar FV edits: no power, vector arithmetic or dynamic indexing."""
+    nodes = list(ast.walk(value))
+    def depth(node):
+        return 1 + max((depth(child) for child in ast.iter_child_nodes(node)), default=0)
+    if len(nodes) > MAX_EXPRESSION_NODES or depth(value) > MAX_EXPRESSION_DEPTH:
+        raise ValueError("candidate expression size/depth budget exceeded")
+    boundary = isinstance(target, ast.Subscript)
+
+    def scalar(node):
+        if _numeric_literal(node):
+            return
+        if isinstance(node, ast.Name) and node.id in {"speed", "dx", "dt"}:
+            return
+        if (boundary and isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name)
+                and node.value.id == "state" and _index(node.slice)):
+            return
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
+            scalar(node.operand)
+            return
+        if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.Div)):
+            if isinstance(node.op, ast.Div) and not (
+                    isinstance(node.right, ast.Name) and node.right.id == "dx"
+                    or _numeric_literal(node.right) and abs(node.right.value) >= 1e-12):
+                raise ValueError("division requires dx or a bounded nonzero literal denominator")
+            scalar(node.left)
+            scalar(node.right)
+            return
+        if isinstance(node, ast.IfExp):
+            condition(node.test)
+            scalar(node.body)
+            scalar(node.orelse)
+            return
+        raise ValueError("unsupported FV scalar expression, name, literal or subscript")
+
+    def condition(node):
+        if isinstance(node, ast.Compare) and all(isinstance(op, (ast.Gt, ast.GtE, ast.Lt, ast.LtE, ast.Eq, ast.NotEq)) for op in node.ops):
+            scalar(node.left)
+            for item in node.comparators:
+                scalar(item)
+            return
+        if isinstance(node, ast.BoolOp) and isinstance(node.op, (ast.And, ast.Or)):
+            for item in node.values:
+                condition(item)
+            return
+        raise ValueError("unsupported scalar condition")
+
+    def neighbor(node):
+        if (isinstance(node, ast.Constant) and type(node.value) is int and node.value == 1
+                or isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub)
+                and isinstance(node.operand, ast.Constant) and type(node.operand.value) is int and node.operand.value == 1):
+            return
+        if isinstance(node, ast.IfExp):
+            condition(node.test)
+            neighbor(node.body)
+            neighbor(node.orelse)
+            return
+        raise ValueError("neighbor selector must choose adjacent offsets +1/-1")
+
+    if isinstance(target, ast.Name) and target.id == "neighbor_offset":
+        neighbor(value)
+    else:
+        scalar(value)
 
 
 def localized_diff(name: str, original: str, proposed: str) -> str:
@@ -60,17 +144,7 @@ def check_candidate(snapshot: SourceSnapshot, proposed: str) -> int:
     candidate = next((n for n in editable_assignments(after) if n.lineno == line), None)
     if original is None or candidate is None or ast.dump(original.targets[0]) != ast.dump(candidate.targets[0]):
         raise ValueError("only an allowlisted advance assignment expression may change")
-    nodes = list(ast.walk(candidate.value))
-    allowed = (ast.Name, ast.Load, ast.Constant, ast.BinOp, ast.UnaryOp, ast.IfExp,
-               ast.Compare, ast.BoolOp, ast.Subscript, ast.Add, ast.Sub, ast.Mult,
-               ast.Div, ast.Pow, ast.USub, ast.UAdd, ast.Gt, ast.GtE, ast.Lt,
-               ast.LtE, ast.Eq, ast.NotEq, ast.And, ast.Or)
-    if len(nodes) > 64 or any(not isinstance(n, allowed) for n in nodes):
-        raise ValueError("candidate expression exceeds restricted arithmetic grammar")
-    if any(isinstance(n, ast.Name) and n.id not in {"state", "speed", "dx", "dt", "neighbor_offset"} for n in nodes):
-        raise ValueError("candidate references an unsupported name")
-    if any(isinstance(n, ast.Constant) and type(n.value) not in (int, float) for n in nodes):
-        raise ValueError("only numeric literal constants are supported")
+    validate_expression(candidate.value, candidate.targets[0])
     if ast.dump(original.value) == ast.dump(candidate.value):
         raise ValueError("proposal has no AST expression change")
     original.value = candidate.value
@@ -93,7 +167,12 @@ def validate_proposal(snapshot: SourceSnapshot, proposal: RepairProposal) -> str
         raise ValueError("conflicting original source line")
     lines[proposal.line_number-1] = proposal.new_line + "\n"
     proposed = "".join(lines)
-    check_candidate(snapshot, proposed)
+    line = check_candidate(snapshot, proposed)
+    target = next(n.targets[0] for n in editable_assignments(ast.parse(proposed)) if n.lineno == line)
+    mechanism = ("periodic_neighbor" if isinstance(target, ast.Subscript) else
+                 "transport_direction" if target.id == "neighbor_offset" else "spatial_scaling")
+    if proposal.hypothesis.mechanism != mechanism:
+        raise ValueError("hypothesis does not match the edited assignment")
     if source_hash(proposed) != proposal.proposed_sha256 or localized_diff(snapshot.source_file, snapshot.source_text, proposed) != proposal.unified_diff:
         raise ValueError("proposed hash or canonical diff mismatch")
     return proposed

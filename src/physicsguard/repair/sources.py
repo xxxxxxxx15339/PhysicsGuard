@@ -3,6 +3,7 @@ from hashlib import sha256
 import os
 from pathlib import Path
 import stat
+import errno
 
 from physicsguard.schemas.repairs import SourceSnapshot
 
@@ -20,9 +21,11 @@ def source_hash(text: str) -> str:
 
 
 def checked_path(root: Path, name: str) -> Path:
-    if name not in REVIEWED_HASHES:
+    if not isinstance(name, str) or name not in REVIEWED_HASHES:
         raise ValueError("source file is not an allowlisted fixture basename")
     root = Path(root).absolute()
+    if ".." in root.parts:
+        raise ValueError("parent traversal is not permitted")
     path = root / name
     if any(p.is_symlink() for p in (path, *path.parents)):
         raise ValueError("symlinks are not permitted")
@@ -33,12 +36,30 @@ def checked_path(root: Path, name: str) -> Path:
 
 def read_source(root: Path, name: str) -> str:
     path = checked_path(root, name)
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    # Anchor traversal through directory descriptors. O_NOFOLLOW on a leaf alone
+    # cannot protect an ancestor replaced with a symlink between check and open.
+    directory = os.open(path.anchor, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for part in path.parent.parts[1:]:
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+            os.close(directory)
+            directory = child
+        descriptor = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+    except OSError as error:
+        if error.errno in (errno.ELOOP, errno.ENOTDIR):
+            raise ValueError("symlink/directory substitution rejected") from error
+        raise
+    finally:
+        os.close(directory)
     with os.fdopen(descriptor, "rb") as stream:
         info = os.fstat(stream.fileno())
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > MAX_SOURCE_BYTES:
             raise ValueError("source must be a bounded regular file without hard links")
         data = stream.read(MAX_SOURCE_BYTES + 1)
+        after = os.fstat(stream.fileno())
+        fields = ("st_dev", "st_ino", "st_size", "st_mtime_ns", "st_ctime_ns", "st_nlink")
+        if any(getattr(info, key) != getattr(after, key) for key in fields):
+            raise ValueError("source changed during snapshot read")
     if len(data) > MAX_SOURCE_BYTES:
         raise ValueError("source size limit exceeded")
     return data.decode("utf-8")

@@ -4,8 +4,13 @@ Recorded October 27, 2026 against approved published baseline
 `46b6e78c19b0bf37aa15e2c14d91fce2a1d971ef`. The owner reports that Milestone 2.1
 passed GitHub Actions on Python 3.11, 3.12 and 3.13. Earlier local measurements in
 the Milestone 2/2.1 documents remain historical, not retroactive CI claims.
-This new implementation is local and uncommitted. No commits, pushes, publication,
-deployment, credentials or paid/model API calls were made.
+At this original validation the implementation was local and uncommitted. No
+commits, pushes, publication, deployment, credentials or paid/model API calls
+were made during that validation. The owner subsequently published Milestone 3
+as `622c9cd1ac11e9247a4746555faed3a9485f1abf` and reports successful GitHub
+Actions on Python 3.11, 3.12 and 3.13. Historical measurements below are preserved
+as local evidence; [Milestone 3.1](milestone3_1_validation.md) records subsequent
+policy/verification changes and their separately executed outcomes.
 
 ## Implemented workflow and scope
 

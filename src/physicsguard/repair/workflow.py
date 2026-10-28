@@ -29,7 +29,7 @@ def repair_source(store, source_file: str, *, cases=None, timeout_seconds=2.0) -
             reason = ("No failed scientific properties observed; no source modification proposed" if abstained
                       else "Evidence is inconclusive or no supported source pattern is sufficiently evidenced")
         else:
-            attempt = verify_candidate(store, snapshot, proposal, development, cases, timeout_seconds=timeout_seconds)
+            attempt = verify_candidate(store, snapshot, proposal, development_cases=cases, timeout_seconds=timeout_seconds)
             attempts = (attempt,)
             reason = "; ".join(attempt.verification.reasons)
     return RepairReport(snapshot, development, attempts, abstained, reason,

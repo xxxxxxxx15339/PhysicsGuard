@@ -15,7 +15,7 @@ from physicsguard.repair.policy import check_candidate, localized_diff, parse_lo
 from physicsguard.repair.proposals import make_proposal, propose_repair
 from physicsguard.repair.sources import REVIEWED_HASHES, SourceStore, default_source_store, source_hash
 from physicsguard.repair.tools import RepairTools
-from physicsguard.repair.validator import case_signature, compare_regressions, verify_candidate
+from physicsguard.repair.validator import case_signature, compare_regressions, verify_candidate, _verify_candidate_for_testing
 from physicsguard.repair.verification_cases import independent_plan
 from physicsguard.repair.workflow import repair_source
 from physicsguard.repair.workspace import source_workspace
@@ -187,7 +187,9 @@ def test_symlinked_disposable_candidate_is_not_executed(store):
 @pytest.mark.parametrize("case,expected", [("positive_only","REJECTED"),("mass_damaging","REJECTED"),
     ("nonfinite","REJECTED"),("execution_failure","REJECTED"),("syntax","REJECTED"),
     ("stale_hash","REJECTED"),("test_modification","REJECTED"),("unrelated_file","REJECTED"),
-    ("timeout","INCONCLUSIVE"),("verification_unavailable","INCONCLUSIVE")])
+    ("timeout","REJECTED"),("verification_unavailable","INCONCLUSIVE"),
+    ("domain_overfit","REJECTED"),("grid_overfit","REJECTED"),
+    ("profile_seam","REJECTED"),("conservative_wrong_speed","REJECTED")])
 def test_bad_proposals_and_unsupported_execution_are_not_accepted(measured, case, expected):
     attempt = next(o["attempt"] for o in measured["negative_proposals"] if o["case"] == case)
     assert attempt["verification"]["decision"] == expected
@@ -196,15 +198,24 @@ def test_bad_proposals_and_unsupported_execution_are_not_accepted(measured, case
         # Source change passes its development examples; independent negative speed reveals it.
         assert all(d["status"] != "fail" for d in attempt["verification"]["after_development"]["report"]["diagnostics"])
         assert any(d["status"] == "fail" for d in attempt["verification"]["after_additional"]["report"]["diagnostics"])
-    elif case == "mass_damaging":
-        assert any("conservation" in key for key in attempt["verification"]["regression_ids"])
-    elif case == "nonfinite":
-        assert any(a.get("error_kind") == "nonfinite_output"
-                   for a in attempt["verification"]["after_additional"]["report"]["executions"])
-    elif case == "timeout":
-        assert attempt["verification"]["after_development"]["status"] == "timeout"
+    elif case in {"mass_damaging", "nonfinite", "execution_failure", "timeout"}:
+        assert attempt["verification"]["stages"]["source"] == "fail"
+        assert attempt["verification"]["after_development"] is None
     elif case == "verification_unavailable":
-        assert any(a["status"] == "unavailable" for a in attempt["verification"]["after_additional"]["report"]["executions"])
+        assert any(a["status"] == "unavailable" for a in attempt["verification"]["before_additional"]["report"]["executions"])
+    elif case in {"domain_overfit", "grid_overfit"}:
+        v = attempt["verification"]
+        assert not any(d["status"] == "fail" for d in v["after_development"]["report"]["diagnostics"])
+        assert any(d["status"] == "fail" for d in v["after_additional"]["report"]["diagnostics"])
+        assert any("Scientific failures" in reason for reason in v["reasons"])
+    elif case == "conservative_wrong_speed":
+        ds = attempt["verification"]["after_additional"]["report"]["diagnostics"]
+        assert all(d["status"] == "pass" for d in ds if d["diagnostic_id"] == "conservation")
+        assert any(d["status"] == "fail" for d in ds if d["diagnostic_id"] == "accuracy")
+    elif case == "profile_seam":
+        assert attempt["verification"]["regression_ids"]
+        assert any(d["diagnostic_id"] == "conservation" and d["status"] == "fail"
+                   for d in attempt["verification"]["after_additional"]["report"]["diagnostics"])
 
 
 def test_verifier_withheld_case_separation_and_missing_evidence(store, measured):
@@ -215,7 +226,7 @@ def test_verifier_withheld_case_separation_and_missing_evidence(store, measured)
     assert all(case_signature(c) not in known for c in plan.additional_cases)
     assert all(c.case_id not in proposal.to_json() for c in plan.additional_cases)
     duplicated = replace(plan,additional_cases=development_cases())
-    result = verify_candidate(store,report.source,proposal,report.development,development_cases(),plan=duplicated)
+    result = _verify_candidate_for_testing(store,report.source,proposal,development_cases(),plan=duplicated)
     assert result.verification.decision == "INCONCLUSIVE"
     missing = next(o["attempt"] for o in measured["negative_proposals"] if o["case"] == "verification_unavailable")
     assert missing["verification"]["decision"] == "INCONCLUSIVE"
@@ -227,7 +238,7 @@ def test_future_model_origin_is_disabled_without_executing_source(store, measure
     source=store.inspect("solver_01.py")
     proposal=parse_proposal(json.dumps(measured["reports"][source.source_file]["attempts"][0]["proposal"]))
     from physicsguard.schemas.repairs import ProcessRun
-    result=verify_candidate(store,source,replace(proposal,origin="meta"),ProcessRun("completed",None,0.,0),development_cases())
+    result=verify_candidate(store,source,replace(proposal,origin="meta"),development_cases=development_cases())
     assert result.verification.decision == "INCONCLUSIVE"
     assert result.verification.after_development is None
     assert result.verification.after_additional is None
@@ -246,19 +257,13 @@ def test_worker_is_separate_and_invalid_caller_cases_raise_before_startup(store)
             run_source_diagnostics(root,source.source_file,(ExperimentCase("invalid",max_steps=1),))
 
 
-def test_timeout_terminates_process_and_cleans_workspace(store, measured):
+def test_expensive_timeout_payload_is_rejected_before_execution(store, measured):
     source=store.inspect("solver_02.py")
     supported=parse_proposal(json.dumps(measured["reports"][source.source_file]["attempts"][0]["proposal"]))
     proposal=make_proposal(source,supported.hypothesis,"    scale = 9 ** (9 ** 9)")
-    candidate=validate_proposal(source,proposal)
-    case=ExperimentCase("timeout-test")
-    from physicsguard.experiments.scenarios import cell_averages
-    with source_workspace(source,candidate) as root:
-        with FixtureWorker(root,source.source_file,timeout_seconds=.2) as worker:
-            with pytest.raises(WorkerTimeout):
-                worker(cell_averages(case),case.config())
-            assert worker.process.poll() is not None
-    assert not root.exists() and store.unchanged(source)
+    with pytest.raises(ValueError, match="unsupported"):
+        validate_proposal(source,proposal)
+    assert store.unchanged(source)
 
 
 def test_external_source_changes_are_rejected_without_overwriting_them(store, measured, tmp_path):
@@ -270,7 +275,7 @@ def test_external_source_changes_are_rejected_without_overwriting_them(store, me
     altered=source.source_text+"# concurrent owner edit\n"
     (tmp_path/source.source_file).write_text(altered)
     from physicsguard.schemas.repairs import ProcessRun
-    attempt=verify_candidate(local,source,proposal,ProcessRun("completed",None,0.,0),development_cases())
+    attempt=verify_candidate(local,source,proposal,development_cases=development_cases())
     assert attempt.verification.decision == "REJECTED"
     assert not attempt.original_integrity
     assert (tmp_path/source.source_file).read_text() == altered
@@ -311,11 +316,31 @@ def test_repair_metrics_json_and_reproducibility(measured):
         "defective_fixtures":3,"detected":3,"useful_localization":3,"valid_proposals":3,"accepted":3}
     assert metrics["false_repairs"] == 0 and metrics["regression_rate"] == 0
     assert measured["categories"]["unseen_source_mutation_patterns"]["status"] == "unevaluated"
-    assert measured["categories"]["negative_proposals"] == {"attempted":10,"accepted":0,"rejected":8,"inconclusive":2}
+    assert measured["categories"]["negative_proposals"] == {"attempted":14,"accepted":0,"rejected":13,"inconclusive":1}
     assert all(o["attempt"]["proposal"]["origin"] == "human" for o in measured["negative_proposals"])
     replay=evaluate_repairs()
     assert without_runtime(measured) == without_runtime(replay)
     json.loads(json.dumps(measured,allow_nan=False))
+
+
+def test_source_presentation_robustness_is_static_not_a_repair_score(measured):
+    result = measured["categories"]["source_format_robustness"]
+    assert (result["samples"], result["recognized"], result["unsupported_recognition"]) == (12, 9, 3)
+    for record in result["observations"]:
+        assert not record["repair_verified"]
+        assert record["execution"] == "unsupported_unreviewed_source"
+        assert record["proposal_generated"] == record["proposal_syntax_valid"]
+        assert record["ast_identical"] == (record["variation"] != "equivalent_expression")
+
+
+def test_independently_structured_correct_sources_are_not_false_repairs(measured):
+    result = measured["categories"]["independent_correct_sources"]
+    assert result["samples"] == 2
+    assert result["scientifically_flagged"] == result["unnecessary_proposals"] == 0
+    assert result["repair_policy_refusals"] == 2
+    for row in result["observations"]:
+        assert all(a["status"] == "success" for a in row["report"]["executions"])
+        assert not any(d["applicable"] and d["status"] == "inconclusive" for d in row["report"]["diagnostics"])
 
 
 def test_repair_cli_cannot_overwrite_a_solver_source(store, monkeypatch):

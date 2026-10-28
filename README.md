@@ -3,7 +3,7 @@
 An AI scientific debugging agent for investigating numerical PDE solver errors,
 proposing localized repairs, and verifying them with independent experiments.
 
-**Current status: Milestone 2.1 published; Milestones 2.2/3 implemented locally for reviewed source fixtures.** The package
+**Current status: Milestone 3 published; Milestone 3.1 hardening implemented locally for reviewed source fixtures.** The package
 solves source-free periodic 1D linear advection with a first-order conservative
 finite-volume upwind method and forward Euler. It includes exact sine-wave cell
 averages, deterministic scientific diagnostics and bounded experiment execution.
@@ -12,10 +12,10 @@ groups and four additional challenging correct groups. The
 Meta investigator, general autonomous repair, API and interactive application
 remain planned. The deterministic source-repair demonstration below is implemented.
 
-Published Milestone 2.1 baseline: `46b6e78c19b0bf37aa15e2c14d91fce2a1d971ef`.
+Published Milestone 3 baseline: `622c9cd1ac11e9247a4746555faed3a9485f1abf`.
 The owner reports its GitHub Actions matrix passed on Python 3.11, 3.12 and 3.13.
-The original local Milestone 2.1 results remain historical evidence. Milestones
-2.2/3 changes and their new validation are local and have not been committed/pushed.
+Original milestone validation measurements remain historical local evidence.
+Milestone 3.1 changes have not been committed or pushed.
 
 ## Project layout
 
@@ -189,9 +189,14 @@ standalone modules under `benchmarks/source_fixtures/` contain three numerical
 defects and one correct control. The original six-branch PhysicsBugBench corpus
 is unchanged. The source benchmark measures **3/3 detected, localized, proposed
 and independently accepted repairs**, each replacing one source line. The
-correct control abstains. Ten bad/unsupported proposal controls produce **8
-rejections, 2 inconclusive decisions and zero acceptances**. These populations
-are scored separately; unseen source mutation patterns remain unevaluated.
+correct control abstains. Fourteen bad/unsupported proposal controls produce **13
+rejections, 1 inconclusive decision and zero acceptances**. Dangerous arithmetic
+previously stopped by a timeout is now rejected by policy before execution.
+Separate real-child timeout tests still return insufficient execution evidence.
+These populations are scored separately; unseen mechanisms remain unevaluated.
+Static source-format probes recognize 9/12 variations (no extra verified repairs).
+Two separately structured correct implementations pass scientific diagnostics
+without proposals; their unreviewed sources remain refused by the repair policy.
 
 For one source file:
 
@@ -209,7 +214,7 @@ print(report.original_integrity, report.workspaces_cleaned)
 The pipeline inspects a hashed source snapshot, runs development diagnostics,
 uses explicit deterministic AST rules to propose one localized expression edit,
 applies it only to a disposable copy, and invokes an independent scientific gate.
-The gate reruns development regressions and additional signed-velocity, profile,
+The gate freshly measures original and candidate development evidence and additional signed-velocity, profile,
 grid, domain and observation-time cases that were not given to the proposer.
 It accepts from actual measured properties, without requiring every error norm
 to decrease. Original source files are never patched. The full JSON retains
@@ -226,8 +231,17 @@ Model-origin execution is disabled. A future private deployment must isolate
 verifier assets and candidate execution at the OS level. No Meta calls, arbitrary
 source uploads, autonomous model repairs, FastAPI or UI are implemented.
 
-See [source repair architecture and measured validation](docs/milestone3_validation.md)
-and the [fixture/evaluator provenance](benchmarks/source_fixtures/README.md).
+The production verifier accepts no caller reports, custom plans or tolerances.
+Every required experiment must supply its applicable evidence. The JSON tool
+adapter accepts bounded operation identifiers and experiment records; the host
+renders supported edits. It accepts no raw Python, plans or evaluator objects.
+Host-only internal testing hooks are not investigator operations. These transport
+restrictions require a separate investigator process to become an access boundary.
+
+See [Milestone 3.1 validation](docs/milestone3_1_validation.md), the preserved
+[Milestone 3 record](docs/milestone3_validation.md),
+[Linux/container instructions (container untested)](dev/README.md) and
+[fixture provenance](benchmarks/source_fixtures/README.md).
 
 ## Run an advection experiment
 
