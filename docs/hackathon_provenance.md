@@ -154,3 +154,21 @@ documentation attribution in `dev/README.md`; no runtime was available to test i
 preserved historical publication/CI claims and untested deployment requirements.
 Milestone 3.1 remains uncommitted/unpushed; no history rewrite, licensing change,
 asset redistribution, publication, deployment or paid API call was performed.
+
+## Milestone 4 keyless local investigator
+
+On October 29, 2026, the owner authorized local implementation of the agent
+protocol, bounded investigation loop, deterministic mock, local Meta Llama 3.1
+8B Ollama adapter, CLI, tests and documentation. This newly authored work uses
+the unchanged reviewed-source tools and independent mathematical verifier.
+No pre-hackathon solver/code/results/assets were imported. Host-rendered edits
+retain deterministic origin even when selected by a model. Mock traces are
+explicitly not model inference or Llama/Muse performance.
+
+The optional OpenAI client SDK and dependencies were installed in the existing
+virtual environment to exercise the already-installed local Llama model. The
+adapter follows official Ollama OpenAI-compatible/tool-calling documentation;
+no hosted Meta endpoint or Muse behavior is invented. Local loopback inference
+was executed, including incomplete investigations; see [Milestone 4 validation](milestone4_validation.md)
+for actual outcomes. No real API credentials, hosted model requests, purchases,
+model downloads, commits, pushes or deployments were authorized or performed.

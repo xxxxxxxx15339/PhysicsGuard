@@ -65,3 +65,15 @@ baseline's tracked tree; `.gitignore` alone cannot remove history. See
 
 PhysicsGuard's own project license has not yet been selected. This document is
 an audit record, not a claim that all release obligations have been completed.
+
+## Milestone 4 optional local client
+
+The `ollama` extra adds `openai>=1.40,<3`; it is optional and unused in mock CI.
+Local validation installed OpenAI SDK 2.54.0 and HTTPX 0.28.1, with their runtime
+dependencies, in the repository virtual environment. No SDK source is vendored.
+The OpenAI-compatible client targets local Ollama, not a hosted OpenAI/Meta API.
+The existing local model is `llama3.1:8b`, reported as 8.0B/Q4_K_M GGUF. Model
+weights are not downloaded by PhysicsGuard or redistributed in the repository.
+Runtime model/license and full transitive redistribution review remain release
+tasks; using the SDK does not establish Meta hosted API access. See the exact
+environment/provenance and official references in [Milestone 4 validation](milestone4_validation.md).

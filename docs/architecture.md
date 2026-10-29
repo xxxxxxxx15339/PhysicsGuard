@@ -5,8 +5,9 @@ and a separate web interface under `web`.
 
 Milestone 1 implements the deterministic numerical foundation. Milestone 2 adds
 diagnostic evidence, controlled experiment execution and PhysicsBugBench. The
-Meta-driven investigation and general repository repair remain planned. Milestone
-3 implements a deterministic source-repair workflow for reviewed local fixtures.
+Milestone 3 implements a deterministic source-repair workflow for reviewed local
+fixtures. Milestone 4 adds bounded mock/local-Llama investigation; general
+repository repair and hosted Meta integration remain planned.
 
 Milestone 3 is published as `622c9cd1ac11e9247a4746555faed3a9485f1abf`; the
 owner reports that baseline's 3.11/3.12/3.13 CI matrix passed. Earlier local
@@ -17,7 +18,7 @@ trusted numerical solver and diagnostic acceptance thresholds are unchanged.
 | Package | Responsibility | Status |
 | --- | --- | --- |
 | `api` | Expose application endpoints. | Planned |
-| `agent` | Interpret evidence, choose experiments, propose localized repairs. | Planned |
+| `agent` | JSON-only mock/local-Llama investigation, bounded tools and trace provenance. | Milestone 4, local |
 | `numerics` | Advection, interface fluxes, and exact cell-average references. | Milestone 1 |
 | `diagnostics` | Independent conservation, accuracy, direction, stability, refinement and invariance measurements. | Milestone 2 |
 | `repair` | Inspect reviewed source, propose bounded expression edits, verify disposable candidates in subprocesses. | Milestone 3, deterministic fixture scope |
@@ -295,3 +296,37 @@ evaluator callables and remain outside the reviewed-source allowlist. Unknown
 mechanisms remain unevaluated. The optional [container recipe](../dev/README.md)
 was not executed because Docker/Podman were unavailable. Its image contains public
 verifier assets and must not become the investigator's filesystem.
+
+## Milestone 4 local investigator
+
+`agent/protocol.py` defines validated finite, duplicate-free JSON records and
+schemas for exactly seven existing tools. Providers implement a JSON-string
+`ModelClient` interface. The host loop owns the source snapshot, dispatcher,
+run/proposal identities and budgets. A provider receives descriptions and
+explicit public projections, never a store, callable or evaluator report.
+
+`boundary.py` projects numbered source, development inputs, execution summaries,
+diagnostics, host-rendered proposals and sanitized verifier decisions. It strips
+variable runtimes, bulky execution arrays, detailed errors and non-allowlisted
+fields. `planner.py` enforces source/run/proposal scope, sequential tool/result
+IDs, duplicate detection and action/experiment/verification/invalid-response/
+conversation/cumulative-input/output-token limits. Evidence citations must refer
+to observed development records. Cited hypotheses can precede edit selection;
+only the verifier's returned decision enters the final authoritative summary.
+This checks evidence references, not the semantic truth of free-text narratives.
+
+`MockClient` deterministically chooses signed experiments and selects operations
+from public failed diagnostic families. It uses no fixture-to-answer lookup or
+private verification inputs and always reports `model_inference=false`.
+`OllamaClient` uses optional OpenAI SDK Chat Completions against loopback HTTP
+only, with a local placeholder token, no proxies/redirects/retries/environment
+organization headers, fixed `llama3.1:8b`, finite timeouts and response caps.
+Successful response identity is checked. Per-investigation inference provenance
+requires an actual matching inference response; failures never switch to mock.
+
+The external model receives no executable host access. This does not isolate
+the trusted Python provider implementation or local server from the OS. Existing
+reviewed-source worker limitations, public verifier definitions and lack of
+private evaluator deployment remain. A future hosted Muse adapter must use the
+same protocol after official API verification and separate authorization; none
+is implemented. FastAPI and the custom web flow remain Milestone 5 work.

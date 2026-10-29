@@ -3,19 +3,22 @@
 An AI scientific debugging agent for investigating numerical PDE solver errors,
 proposing localized repairs, and verifying them with independent experiments.
 
-**Current status: Milestone 3 published; Milestone 3.1 hardening implemented locally for reviewed source fixtures.** The package
+**Current status: Milestone 4 local implementation: keyless agent orchestration over reviewed source fixtures.** The package
 solves source-free periodic 1D linear advection with a first-order conservative
 finite-volume upwind method and forward Euler. It includes exact sine-wave cell
 averages, deterministic scientific diagnostics and bounded experiment execution.
 PhysicsBugBench contains six controlled faults, three original correct control
 groups and four additional challenging correct groups. The
-Meta investigator, general autonomous repair, API and interactive application
-remain planned. The deterministic source-repair demonstration below is implemented.
+Investigation supports a deterministic mock and optional local Meta Llama 3.1 8B
+through Ollama. Mock traces are explicitly not model inference. Hosted Muse,
+general autonomous repair, API and interactive application remain planned. See
+[Milestone 4 validation](docs/milestone4_validation.md) for executed evidence.
 
 Published Milestone 3 baseline: `622c9cd1ac11e9247a4746555faed3a9485f1abf`.
 The owner reports its GitHub Actions matrix passed on Python 3.11, 3.12 and 3.13.
 Original milestone validation measurements remain historical local evidence.
-Milestone 3.1 changes have not been committed or pushed.
+Historical publication statements describe the owner-reported baselines.
+Milestone 4 work has not been committed or pushed.
 
 ## Project layout
 
@@ -88,8 +91,9 @@ source .venv/bin/activate
 python -m pip install -e '.[dev]'
 ```
 
-NumPy is the only runtime dependency. No API credentials are needed for
-Milestones 1–3. Use `.env.example` to document future configuration variables; local
+NumPy is the only mandatory runtime dependency. No API credentials are needed
+for the solver, mock investigator or local Ollama investigator. Use `.env.example`
+to document future configuration variables; local
 `.env` files are ignored by Git.
 
 Run the numerical tests or the complete collected suite:
@@ -100,7 +104,50 @@ python -m pytest -q
 ```
 
 Pytest can import the source tree without installing it; normal library use
-requires the editable install above. API and agent tests remain placeholders.
+requires the editable install above. Agent tests run offline; the API remains a placeholder.
+
+## Run the keyless investigator
+
+From the repository root on non-root Linux:
+
+```sh
+python -m physicsguard.agent.demo --backend mock --source solver_01.py
+python -m pip install -e '.[dev,ollama]'
+python -m physicsguard.agent.demo --backend ollama --model llama3.1:8b --source solver_01.py
+```
+
+The real backend requires a separately running local Ollama server with
+`llama3.1:8b` already available. PhysicsGuard does not start the server, download
+weights, use real credentials, or call hosted providers. Its fixed CLI endpoint
+is `http://127.0.0.1:11434/v1`; the library also accepts validated loopback origins.
+The SDK uses a literal local placeholder token, which is not a Meta API key.
+Model IDs are pinned to this local Llama tag to exclude cloud model selection.
+
+Each invocation prints selected tools, measured evidence, a hypothesis or
+abstention, a host-rendered diff, independent verifier decision, integrity and
+cleanup. A private strict JSON trace is created under `artifacts/`. `--trace`
+accepts a new JSON basename only; existing files are refused. `--timeout`,
+`--max-actions`, `--max-turns` and `--max-verifications` control bounded budgets.
+Unavailable Ollama requests produce explicit failures, never a mock fallback.
+
+The investigator selects experiments/host operations; existing deterministic host
+rules author the one-line patch and the independent verifier owns acceptance.
+No raw model-authored source is executable. Public summaries omit evaluator
+cases, answers, raw errors, execution arrays and variable runtimes. Providers
+receive serialized messages, not host Python objects. This transport boundary
+does not provide OS isolation for arbitrary code or private benchmark deployment.
+
+Standard tests require neither the optional SDK nor network/model access. Live
+inference is explicitly opt-in and reports only a bounded smoke-test outcome:
+
+```sh
+PHYSICSGUARD_LIVE_OLLAMA=1 python -m pytest tests/test_agent.py::test_live_ollama_investigation -q
+```
+
+The adapter follows [Ollama's OpenAI compatibility documentation](https://docs.ollama.com/api/openai-compatibility)
+and [tool-calling documentation](https://docs.ollama.com/capabilities/tool-calling).
+[Llama 3.1](https://ollama.com/library/llama3.1) is a Meta model; this is neither
+Muse Spark nor Meta Model API access.
 
 ## Reproduce PhysicsBugBench
 
@@ -228,8 +275,9 @@ assignment-expression change**. Child processes have hard wall timeouts, a
 sanitized environment and POSIX CPU/address-space/file/process limits. They share
 the host UID/filesystem/network: this is **not an arbitrary-code sandbox**.
 Model-origin execution is disabled. A future private deployment must isolate
-verifier assets and candidate execution at the OS level. No Meta calls, arbitrary
-source uploads, autonomous model repairs, FastAPI or UI are implemented.
+verifier assets and candidate execution at the OS level. Arbitrary source
+uploads, raw model-authored repairs, FastAPI and UI remain unimplemented. The
+Milestone 4 investigator uses this same constrained host engine.
 
 The production verifier accepts no caller reports, custom plans or tolerances.
 Every required experiment must supply its applicable evidence. The JSON tool
